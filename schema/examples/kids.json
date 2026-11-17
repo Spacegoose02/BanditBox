@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "profileId": "p_kids",
+  "version": 42,
+  "profile": {
+    "name": "Kids",
+    "pin": "argon2id$placeholder",
+    "autoLogin": false,
+    "kids": {
+      "approvedApps": ["com.spacegoose.bingebandit", "com.spacegoose.wavelength"],
+      "dailyLimitMin": 120,
+      "bedtime": { "start": "20:00", "end": "07:00" }
+    }
+  },
+  "theme": {
+    "id": "neon",
+    "accent": "#39FF14",
+    "wallpaper": "media:sha256-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "iconPack": "banditbox-uniform",
+    "screensaver": { "type": "oled-drift" }
+  },
+  "rows": [
+    { "id": "r1", "type": "apps", "title": "Favorites", "tile": { "size": "large", "style": "banner" }, "items": ["com.plexapp.android", "folder:f1"] },
+    { "id": "r2", "type": "widget", "feed": "bingebandit.continue-watching" },
+    { "id": "r3", "type": "watchnext" }
+  ],
+  "folders": [{ "id": "f1", "name": "Sports", "items": ["com.spacegoose.statscraps"] }],
+  "hiddenApps": ["com.amazon.tv.launcher"],
+  "topBar": ["clock", "weatherscout.now", "inputs", "network", "settings"],
+  "remap": [
+    { "key": "HOME", "press": "long", "action": { "type": "openInput", "input": "HDMI2" } },
+    { "key": "PROG_RED", "press": "short", "action": { "type": "allApps" } }
+  ]
+}

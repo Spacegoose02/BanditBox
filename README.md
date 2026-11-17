@@ -10,7 +10,7 @@ See [docs/roadmap.md](docs/roadmap.md) and [docs/handoff.md](docs/handoff.md).
 | --- | --- |
 | `android/` | The TV launcher: Kotlin, Compose for TV, minSdk 30 (onn 4K, Nvidia Shield) |
 | `server/` | The master sync server: Go, single static binary, runs in Docker on Unraid |
-| `schema/` | JSON Schemas shared by both sides (coming next) |
+| `schema/` | JSON Schemas shared by both sides, the source of truth for the layout format |
 | `web/` | SvelteKit web UI, embedded in the server (Phase 2) |
 | `deploy/` | Dockerfile, compose file, Unraid template (Phase 2) |
 | `docs/` | Roadmap, handoff, decision records |

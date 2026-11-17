@@ -1,0 +1,35 @@
+name: Schema
+
+on:
+  push:
+    branches: [main]
+    paths: ["schema/**", ".github/workflows/schema.yml"]
+  pull_request:
+    paths: ["schema/**", ".github/workflows/schema.yml"]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: schema
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install check-jsonschema==0.39.0
+      - name: Schemas are valid JSON Schema
+        run: check-jsonschema --check-metaschema *.schema.json
+      - name: Examples pass
+        run: check-jsonschema --schemafile layout.schema.json examples/*.json
+      - name: Invalid examples fail
+        run: |
+          status=0
+          for f in examples/invalid/*.json; do
+            if check-jsonschema --schemafile layout.schema.json "$f" > /dev/null 2>&1; then
+              echo "::error file=schema/$f::expected this document to be rejected"
+              status=1
+            fi
+          done
+          exit $status
