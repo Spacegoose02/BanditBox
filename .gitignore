@@ -1,0 +1,31 @@
+# OS / editors
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/**/build/
+android/local.properties
+android/captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Go
+server/bin/
+server/banditbox
+*.test
+coverage.out
+
+# Web
+web/node_modules/
+web/build/
+web/.svelte-kit/
+
+# Local data
+config/
+*.db
