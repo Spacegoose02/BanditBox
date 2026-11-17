@@ -22,11 +22,12 @@ class AppVisuals(context: Context, maxBytes: Int = defaultCacheBytes()) {
     }
 
     /**
-     * The banner scaled to [widthPx] x [heightPx], or, for apps without one, the icon scaled
-     * to [iconPx] square. Does disk IO: call off the main thread. Null if the app is gone.
+     * The banner scaled to [widthPx] x [heightPx], or the icon scaled to [iconPx] square when
+     * the app has no banner or [preferBanner] is false. Does disk IO: call off the main thread.
+     * Null if the app is gone.
      */
-    fun tile(entry: AppEntry, widthPx: Int, heightPx: Int, iconPx: Int): TileImage? {
-        val key = "${entry.packageName}/${entry.activityName}@${widthPx}x$heightPx/$iconPx"
+    fun tile(entry: AppEntry, widthPx: Int, heightPx: Int, iconPx: Int, preferBanner: Boolean = true): TileImage? {
+        val key = "${entry.packageName}/${entry.activityName}@${widthPx}x$heightPx/$iconPx/$preferBanner"
         cache.get(key)?.let { return it }
 
         val activity = try {
@@ -36,7 +37,7 @@ class AppVisuals(context: Context, maxBytes: Int = defaultCacheBytes()) {
             return null
         }
 
-        val banner = activity.loadBanner(pm)
+        val banner = if (preferBanner) activity.loadBanner(pm) else null
         val image = if (banner != null) {
             TileImage(banner.toBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888), isBanner = true)
         } else {

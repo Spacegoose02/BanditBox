@@ -2,46 +2,76 @@ package com.spacegoose.banditbox
 
 import android.content.ActivityNotFoundException
 import android.content.ComponentCallbacks2
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import com.spacegoose.banditbox.apps.AppActions
 import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.AppVisuals
-import com.spacegoose.banditbox.ui.HomeScreen
+import com.spacegoose.banditbox.layout.LayoutStore
+import com.spacegoose.banditbox.ui.BanditBoxApp
+import com.spacegoose.banditbox.ui.LauncherDeps
 import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
+import java.io.File
 
 /**
  * The single activity. Registered as HOME, so pressing Home lands here.
  * Startup must never wait on the network: everything drawn here comes from local data.
  */
 class HomeActivity : ComponentActivity() {
-    private val index by lazy { AppIndex(this) }
     private val visuals by lazy { AppVisuals(this) }
+    private var homePresses by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // A launcher has nowhere to go back to, so Back on the home screen does nothing.
+        // On the main screen Back does nothing: a launcher has nowhere to go back to.
+        // Screens inside the launcher (All apps) register their own Back handlers on top of this.
         onBackPressedDispatcher.addCallback(this) {}
+
+        val deps = LauncherDeps(
+            index = AppIndex(this),
+            visuals = visuals,
+            store = LayoutStore(File(filesDir, "layouts")),
+            launch = ::launchFirst,
+            onAppAction = ::handle,
+        )
         setContent {
             BanditBoxTheme {
-                HomeScreen(index = index, visuals = visuals, onAction = ::handle)
+                BanditBoxApp(deps = deps, homePresses = homePresses)
             }
         }
     }
 
+    /** Home pressed while BanditBox is already in front: back to the main screen. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        homePresses++
+    }
+
     private fun handle(app: AppEntry, action: AppMenuAction) {
-        try {
-            startActivity(AppActions.intentFor(action, app, packageManager))
-        } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.cannot_open, Toast.LENGTH_SHORT).show()
-        } catch (_: SecurityException) {
-            Toast.makeText(this, R.string.cannot_open, Toast.LENGTH_SHORT).show()
+        launchFirst(listOf(AppActions.intentFor(action, app, packageManager)))
+    }
+
+    private fun launchFirst(intents: List<Intent>) {
+        for (intent in intents) {
+            try {
+                startActivity(Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return
+            } catch (_: ActivityNotFoundException) {
+                // Try the next one.
+            } catch (_: SecurityException) {
+                // Try the next one.
+            }
         }
+        Toast.makeText(this, R.string.cannot_open, Toast.LENGTH_SHORT).show()
     }
 
     override fun onTrimMemory(level: Int) {

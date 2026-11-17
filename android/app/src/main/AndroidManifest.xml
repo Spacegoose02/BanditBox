@@ -9,6 +9,9 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <!-- Shows Ethernet / Wi-Fi / Offline in the top bar. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:allowBackup="false"
         android:banner="@drawable/banner"

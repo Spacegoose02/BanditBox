@@ -2,10 +2,28 @@
 <resources>
     <string name="app_name">BanditBox</string>
     <string name="all_apps">All apps</string>
+    <string name="empty_home">Nothing here yet. Press Menu or open All apps to find your apps.</string>
+
     <string name="action_open">Open</string>
     <string name="action_app_settings">App settings</string>
     <string name="action_app_info">App info</string>
     <string name="action_force_close">Force close</string>
     <string name="action_uninstall">Uninstall</string>
     <string name="cannot_open">Couldn\'t open that</string>
+
+    <string name="inputs">Inputs</string>
+    <string name="settings">Settings</string>
+    <string name="android_settings">Android settings</string>
+    <string name="network_settings">Network &amp; Internet</string>
+    <string name="install_unknown_apps">Install unknown apps</string>
+
+    <string name="network">Network</string>
+    <string name="network_ethernet">Ethernet</string>
+    <string name="network_wifi">Wi-Fi</string>
+    <string name="network_offline">Offline</string>
+
+    <plurals name="folder_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
 </resources>
