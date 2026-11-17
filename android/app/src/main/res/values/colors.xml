@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bb_background">#FF0E0F13</color>
+    <color name="bb_accent">#FF39FF14</color>
+    <color name="bb_mask">#FF2A2C33</color>
+    <color name="bb_fur">#FF8A8F99</color>
+</resources>
