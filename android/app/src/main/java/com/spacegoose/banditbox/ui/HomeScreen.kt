@@ -17,14 +17,23 @@ import androidx.tv.material3.Text
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.layout.ItemRef
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
+
+/** Where a tile was long-pressed, which decides what its menu offers. */
+sealed interface Place {
+    data class InRow(val rowId: String) : Place
+    data object AllApps : Place
+    data class InFolder(val folderId: String) : Place
+}
 
 /** Callbacks shared by every place an app or folder tile appears. */
 class TileActions(
     val onOpen: (AppEntry) -> Unit,
-    val onMenu: (AppEntry) -> Unit,
-    val onFolder: (ResolvedItem.FolderItem) -> Unit,
+    val onAppMenu: (AppEntry, Place) -> Unit,
+    val onFolderOpen: (ResolvedItem.FolderItem) -> Unit,
+    val onFolderMenu: (ResolvedItem.FolderItem, String) -> Unit,
 )
 
 /** The main screen: top bar, then the layout's rows. */
@@ -72,17 +81,25 @@ private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: 
                             visuals = visuals,
                             spec = row.tile,
                             onClick = { actions.onOpen(app) },
-                            onLongClick = { actions.onMenu(app) },
+                            onLongClick = { actions.onAppMenu(app, Place.InRow(row.id)) },
                         )
                     }
-                    is ResolvedItem.FolderItem -> FolderTile(folder = item, spec = row.tile, onClick = { actions.onFolder(item) })
+                    is ResolvedItem.FolderItem -> FolderTile(
+                        folder = item,
+                        spec = row.tile,
+                        onClick = { actions.onFolderOpen(item) },
+                        onLongClick = { actions.onFolderMenu(item, row.id) },
+                    )
                 }
             }
         }
     }
 }
 
-private fun ResolvedItem.key(): String = when (this) {
-    is ResolvedItem.App -> "app:$packageName"
-    is ResolvedItem.FolderItem -> "folder:$id"
+private fun ResolvedItem.key(): String = rawRef()
+
+/** The item as it is written in the layout document: a package name or folder:<id>. */
+fun ResolvedItem.rawRef(): String = when (this) {
+    is ResolvedItem.App -> packageName
+    is ResolvedItem.FolderItem -> ItemRef.folder(id)
 }

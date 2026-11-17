@@ -97,10 +97,12 @@ fun FolderTile(
     folder: ResolvedItem.FolderItem,
     spec: Tile,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
+        onLongClick = onLongClick,
         shape = CardDefaults.shape(shape = spec.composeShape()),
         modifier = modifier.size(spec.dpSize()),
     ) {

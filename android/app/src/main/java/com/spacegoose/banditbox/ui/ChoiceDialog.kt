@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -21,14 +23,16 @@ import androidx.tv.material3.Text
 
 class Choice(val label: String, val onPick: () -> Unit)
 
-/** A titled list of buttons. Focus starts on the first one; Back closes it. */
+/** A titled list of buttons. Focus starts on the first one; Back closes it; long lists scroll. */
 @Composable
 fun ChoiceDialog(title: String, choices: List<Choice>, onDismiss: () -> Unit) {
     val first = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(320.dp)) {
+        Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(360.dp)) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
