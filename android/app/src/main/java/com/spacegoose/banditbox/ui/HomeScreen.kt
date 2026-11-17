@@ -5,75 +5,84 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.apps.AppEntry
-import com.spacegoose.banditbox.apps.AppIndex
-import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.layout.ResolvedAppsRow
+import com.spacegoose.banditbox.layout.ResolvedItem
 
-/**
- * Placeholder home screen: every installed app in one grid. The layout renderer
- * (core-layout rows, folders, hidden apps) replaces this in the next step.
- */
+/** Callbacks shared by every place an app or folder tile appears. */
+class TileActions(
+    val onOpen: (AppEntry) -> Unit,
+    val onMenu: (AppEntry) -> Unit,
+    val onFolder: (ResolvedItem.FolderItem) -> Unit,
+)
+
+/** The main screen: top bar, then the layout's rows. */
 @Composable
 fun HomeScreen(
-    index: AppIndex,
+    rows: List<ResolvedAppsRow>,
+    apps: Map<String, AppEntry>,
     visuals: AppVisuals,
-    onAction: (AppEntry, AppMenuAction) -> Unit,
+    topBar: @Composable () -> Unit,
+    actions: TileActions,
     modifier: Modifier = Modifier,
 ) {
-    val appsFlow = remember(index) { index.apps() }
-    val apps by appsFlow.collectAsState(initial = emptyList())
-    var menuFor by remember { mutableStateOf<AppEntry?>(null) }
-
-    Surface(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(horizontal = 48.dp, vertical = 27.dp)) {
+    Column(modifier = modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
+        topBar()
+        if (rows.isEmpty()) {
             Text(
-                text = stringResource(R.string.all_apps),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp),
+                text = stringResource(R.string.empty_home),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 32.dp),
             )
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = TILE_WIDTH),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(12.dp),
-            ) {
-                items(apps, key = { it.packageName }) { app ->
-                    AppTile(
-                        app = app,
-                        visuals = visuals,
-                        onClick = { onAction(app, AppMenuAction.OPEN) },
-                        onLongClick = { menuFor = app },
-                    )
+        }
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            contentPadding = PaddingValues(top = 20.dp, bottom = 32.dp),
+        ) {
+            items(rows, key = { it.id }) { row -> AppsRow(row, apps, visuals, actions) }
+        }
+    }
+}
+
+@Composable
+private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: AppVisuals, actions: TileActions) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        row.title?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            // Room for the focused tile to scale up without clipping.
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+        ) {
+            items(row.items, key = { it.key() }) { item ->
+                when (item) {
+                    is ResolvedItem.App -> apps[item.packageName]?.let { app ->
+                        AppTile(
+                            app = app,
+                            visuals = visuals,
+                            spec = row.tile,
+                            onClick = { actions.onOpen(app) },
+                            onLongClick = { actions.onMenu(app) },
+                        )
+                    }
+                    is ResolvedItem.FolderItem -> FolderTile(folder = item, spec = row.tile, onClick = { actions.onFolder(item) })
                 }
             }
         }
-
-        menuFor?.let { app ->
-            AppMenu(
-                app = app,
-                onDismiss = { menuFor = null },
-                onPick = { action ->
-                    menuFor = null
-                    onAction(app, action)
-                },
-            )
-        }
     }
+}
+
+private fun ResolvedItem.key(): String = when (this) {
+    is ResolvedItem.App -> "app:$packageName"
+    is ResolvedItem.FolderItem -> "folder:$id"
 }
