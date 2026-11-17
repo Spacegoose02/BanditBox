@@ -21,7 +21,8 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 - [ ] Kotlin + Compose for TV app shell: the BanditBox name, the raccoon icon and banner
 - [ ] Lightweight: under 80 MB of RAM at idle on a 2 GB device, no WebView
 - [ ] Zero ads, no promoted rows, no autoplay trailers
-- [ ] Home button override: an accessibility service for Google TV and Fire TV, plus ADB instructions
+- [ ] Home button override: an accessibility service for Google TV (onn 4K), plus ADB instructions
+- [ ] Target devices: onn 4K and Nvidia Shield (minSdk 30); RAM target measured on the onn 4K
 - [ ] Rows of apps with adjustable tiles (size, shape, banner or icon)
 - [ ] Folders, categories and hidden apps, set per profile
 - [ ] Menu button that opens All Apps
@@ -33,7 +34,7 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 - [ ] Local backup and restore to a file (the layout document as JSON)
 - [ ] Basic wallpaper (a single image)
 
-**Gate 1:** BanditBox replaces Projectivy on every TV in the house.
+**Gate 1:** BanditBox replaces Projectivy on every TV in the house (onn 4K and Shield).
 
 ## Phase 2: Master sync (Docker server + web UI)
 
@@ -92,7 +93,7 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 
 ## Risks
 
-- **Fire TV may block the Home override** after a Fire OS update. Test on each Fire OS version, and keep remote remapping as a fallback.
+- **Google TV updates may change the Home override** on the onn 4K. Retest after each update, and keep remote remapping as a fallback. Fire TV support comes later and is riskier, since Amazon has blocked overrides before.
 - **Rows from other apps need an ADB permission grant** on many devices. Your own apps don't need it.
 - **The kids lock is a soft lock** unless the TV runs in device-owner mode.
 - **Google Play policy** may reject an accessibility service that isn't used for accessibility. Distribute through your own server and GitHub releases first.
