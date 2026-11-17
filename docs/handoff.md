@@ -35,7 +35,7 @@ This is the starting brief for a developer or coding agent picking up BanditBox.
 | TV images | Coil with a capped memory cache | Banners are pre-sized by the server |
 | TV storage | Room for the cache and the change queue; DataStore for small settings; EncryptedSharedPreferences for the device token | |
 | TV networking | OkHttp (REST + WebSocket), kotlinx.serialization | No Retrofit, to keep the dependency count low |
-| Server | **Go** (recommended; *open*: Kotlin/Ktor instead) | Go idles around 20 MB. Ktor shares code with the app but idles around 150 MB |
+| Server | **Go** (decided 2026-11-17) | Idles around 20 MB of RAM; single static binary in the Docker image |
 | Server DB | SQLite (`modernc.org/sqlite`, no CGO) | Single file in `/config` |
 | Web UI | SvelteKit, `adapter-static`, served by the Go binary | No Node at runtime |
 | Discovery | mDNS `_banditbox._tcp` | |
@@ -170,7 +170,7 @@ Phase 2 starts with `server/` (pairing + sync endpoints), then `web/` (Devices a
 
 ## 12. Open decisions (owner to answer)
 
-- [ ] **Server language**: Go (recommended) or Kotlin/Ktor?
+- [x] **Server language**: Go (decided 2026-11-17).
 - [ ] **Distribution**: sideload and self-update only, or also Google Play / Amazon Appstore? Play may reject the accessibility service.
 - [ ] **Open source or private**: an Unraid Community Apps listing needs a public image and template.
 - [ ] **Kids lock strength**: soft lock only, or offer device-owner mode?
