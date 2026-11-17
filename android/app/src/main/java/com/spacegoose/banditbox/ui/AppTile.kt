@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -48,8 +51,9 @@ fun AppTile(
     val heightPx = with(density) { TILE_HEIGHT.roundToPx() }
     val iconPx = with(density) { ICON_SIZE.roundToPx() }
 
-    val tile by produceState<LoadedTile?>(initialValue = null, app, widthPx) {
-        value = withContext(Dispatchers.IO) {
+    var tile by remember(app, widthPx) { mutableStateOf<LoadedTile?>(null) }
+    LaunchedEffect(app, widthPx) {
+        tile = withContext(Dispatchers.IO) {
             visuals.tile(app, widthPx, heightPx, iconPx)?.let { LoadedTile(it.bitmap.asImageBitmap(), it.isBanner) }
         }
     }
