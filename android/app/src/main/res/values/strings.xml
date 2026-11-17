@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">BanditBox</string>
+    <string name="all_apps">All apps</string>
+    <string name="action_open">Open</string>
+    <string name="action_app_settings">App settings</string>
+    <string name="action_app_info">App info</string>
+    <string name="action_force_close">Force close</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="cannot_open">Couldn\'t open that</string>
 </resources>
