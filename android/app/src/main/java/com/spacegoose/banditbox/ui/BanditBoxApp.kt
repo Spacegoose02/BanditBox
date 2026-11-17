@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import com.spacegoose.banditbox.DeviceSettings
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppIndex
@@ -37,9 +39,14 @@ import com.spacegoose.banditbox.layout.LayoutDocument
 import com.spacegoose.banditbox.layout.LayoutEdits
 import com.spacegoose.banditbox.layout.LayoutResolver
 import com.spacegoose.banditbox.layout.LayoutStore
+import com.spacegoose.banditbox.layout.Profile
+import com.spacegoose.banditbox.layout.ProfileSummary
+import com.spacegoose.banditbox.layout.Profiles
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
+import com.spacegoose.banditbox.layout.Startup
+import com.spacegoose.banditbox.layout.summary
 import com.spacegoose.banditbox.system.SystemShortcuts
 import com.spacegoose.banditbox.system.TvInput
 import com.spacegoose.banditbox.system.passthroughInputs
@@ -47,20 +54,27 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 /** What the launcher needs from the activity. */
 class LauncherDeps(
     val index: AppIndex,
     val visuals: AppVisuals,
     val store: LayoutStore,
+    val settings: DeviceSettings,
+    /** True when the TV has just booted: auto sign-in or the profile picker applies. */
+    val freshBoot: Boolean,
     /** Start the first intent the device can handle. */
     val launch: (List<Intent>) -> Unit,
     val onAppAction: (AppEntry, AppMenuAction) -> Unit,
 )
 
-private enum class Screen { HOME, ALL_APPS, EDIT_ROWS }
+private enum class Screen { HOME, ALL_APPS, EDIT_ROWS, PICK_PROFILE }
 
 /** An item being moved along its row with the D-pad. */
 private class Moving(val rowId: String, val item: String, val label: String)
@@ -72,16 +86,62 @@ private class Moving(val rowId: String, val item: String, val label: String)
 @Composable
 fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val storeLock = remember { Mutex() }
 
     val appsFlow = remember(deps.index) { deps.index.apps() }
     val apps by appsFlow.collectAsState(initial = null)
-    var doc by remember { mutableStateOf<LayoutDocument?>(null) }
     var inputs by remember { mutableStateOf(emptyList<TvInput>()) }
 
+    var profiles by remember { mutableStateOf(emptyList<ProfileSummary>()) }
+    /** The profile whose layout is loaded and shown; null until one is chosen. */
+    var profileId by remember { mutableStateOf<String?>(null) }
+    var doc by remember { mutableStateOf<LayoutDocument?>(null) }
+    val deletedIds = remember { ConcurrentHashMap.newKeySet<String>() }
+
+    var screen by remember { mutableStateOf(Screen.HOME) }
+    var overlay by remember { mutableStateOf<Overlay?>(null) }
+    var openFolderId by remember { mutableStateOf<String?>(null) }
+    var moving by remember { mutableStateOf<Moving?>(null) }
+    var launchOnBoot by remember { mutableStateOf(deps.settings.launchOnBoot) }
+
+    suspend fun refreshProfiles() {
+        profiles = withContext(Dispatchers.IO) { storeLock.withLock { Profiles.summaries(deps.store) } }
+    }
+
+    fun tvApps() = deps.index.load().filter { it.isLeanback }.map { it.packageName }
+
+    fun open(id: String) {
+        profileId = id
+        deps.settings.currentProfileId = id
+        overlay = null
+        openFolderId = null
+        moving = null
+        screen = Screen.HOME
+    }
+
+    // Startup: make sure a profile exists, then auto sign-in, the picker, or the last profile.
     LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            storeLock.withLock {
+                if (deps.store.profileIds().isEmpty()) {
+                    deps.store.loadOrCreate(DefaultLayout.PROFILE_ID) { DefaultLayout.create(tvApps()) }
+                }
+            }
+        }
+        refreshProfiles()
+        when (val start = Profiles.startup(profiles, deps.settings.currentProfileId, deps.freshBoot)) {
+            is Startup.Open -> open(start.profileId)
+            Startup.Pick -> screen = Screen.PICK_PROFILE
+        }
+    }
+    // Load the chosen profile's layout from disk. Never waits on the network.
+    LaunchedEffect(profileId) {
+        val id = profileId ?: return@LaunchedEffect
+        doc = null
         doc = withContext(Dispatchers.IO) {
-            deps.store.loadOrCreate(DefaultLayout.PROFILE_ID) {
-                DefaultLayout.create(tvApps = deps.index.load().filter { it.isLeanback }.map { it.packageName })
+            storeLock.withLock {
+                deps.store.load(id) ?: deps.store.loadOrCreate(DefaultLayout.PROFILE_ID) { DefaultLayout.create(tvApps()) }
             }
         }
     }
@@ -89,34 +149,82 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
     LaunchedEffect(Unit) {
         snapshotFlow { doc }.filterNotNull().drop(1).conflate().collect { latest ->
             withContext(Dispatchers.IO) {
-                try {
-                    deps.store.save(latest)
-                } catch (e: IOException) {
-                    Log.w("BanditBox", "Couldn't save layout", e)
+                storeLock.withLock {
+                    if (latest.profileId in deletedIds) return@withLock
+                    try {
+                        deps.store.save(latest)
+                    } catch (e: IOException) {
+                        Log.w("BanditBox", "Couldn't save layout", e)
+                    }
                 }
             }
         }
     }
     LaunchedEffect(Unit) { inputs = withContext(Dispatchers.IO) { passthroughInputs(context) } }
 
-    var screen by remember { mutableStateOf(Screen.HOME) }
-    var overlay by remember { mutableStateOf<Overlay?>(null) }
-    var openFolderId by remember { mutableStateOf<String?>(null) }
-    var moving by remember { mutableStateOf<Moving?>(null) }
-
     val edit: ((LayoutDocument) -> LayoutDocument) -> Unit = { change -> doc?.let { doc = change(it) } }
 
+    /** Opening a profile other than the current one asks for its PIN, if it has one. */
+    fun pick(profile: ProfileSummary) {
+        val hash = profile.pinHash
+        val alreadyOpen = profile.id == profileId && screen != Screen.PICK_PROFILE
+        if (hash == null || alreadyOpen) {
+            open(profile.id)
+        } else {
+            overlay = Overlay.PinEntry(context.getString(R.string.pin_enter, profile.name), hash) { open(profile.id) }
+        }
+    }
+
+    val profileActions = ProfileActions(
+        showPicker = { screen = Screen.PICK_PROFILE },
+        add = { name ->
+            scope.launch {
+                val created = withContext(Dispatchers.IO) { storeLock.withLock { Profiles.create(deps.store, name, tvApps()) } }
+                refreshProfiles()
+                open(created.profileId)
+            }
+        },
+        deleteCurrent = {
+            val gone = profileId
+            if (gone != null && profiles.size > 1) {
+                deletedIds += gone
+                profileId = null
+                doc = null
+                screen = Screen.PICK_PROFILE
+                scope.launch {
+                    withContext(Dispatchers.IO) { storeLock.withLock { deps.store.delete(gone) } }
+                    refreshProfiles()
+                }
+            }
+        },
+        setAutoLogin = { on ->
+            edit { LayoutEdits.setAutoLogin(it, on) }
+            val id = profileId
+            if (on && id != null) {
+                scope.launch {
+                    withContext(Dispatchers.IO) { storeLock.withLock { Profiles.clearAutoLoginExcept(deps.store, id) } }
+                    refreshProfiles()
+                }
+            }
+        },
+    )
+
     LaunchedEffect(homePresses) {
-        screen = Screen.HOME
+        // Home never skips the picker when no profile has been opened yet (boot with several profiles).
+        screen = if (profileId == null && profiles.size > 1) Screen.PICK_PROFILE else Screen.HOME
         overlay = null
         openFolderId = null
         moving = null
     }
-    BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
+    BackHandler(enabled = screen != Screen.HOME && profileId != null) { screen = Screen.HOME }
     BackHandler(enabled = moving != null) { moving = null }
 
     val currentApps = apps
     val currentDoc = doc
+    // The picker and settings show the open profile's live name and PIN state.
+    val profilesView = remember(profiles, currentDoc) {
+        profiles.map { if (currentDoc != null && it.id == currentDoc.profileId) currentDoc.summary() else it }
+    }
     val byPackage = remember(currentApps) { currentApps.orEmpty().associateBy { it.packageName } }
     val rows = remember(currentDoc, byPackage) {
         if (currentDoc == null) emptyList() else LayoutResolver.appsRows(currentDoc, byPackage.keys)
@@ -143,6 +251,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
             onInputs = { overlay = Overlay.Inputs },
             onNetwork = { deps.launch(SystemShortcuts.network) },
             onSettings = { overlay = Overlay.Settings },
+            onProfile = { screen = Screen.PICK_PROFILE },
         )
     }
 
@@ -166,7 +275,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
             }
         }
         // Menu toggles All apps, like Projectivy. Remotes without a Menu key use the top bar button.
-        if (event.key == Key.Menu && event.type == KeyEventType.KeyUp) {
+        if (event.key == Key.Menu && event.type == KeyEventType.KeyUp && profileId != null) {
             screen = if (screen == Screen.HOME) Screen.ALL_APPS else Screen.HOME
             return true
         }
@@ -174,14 +283,28 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
     }
 
     Surface(modifier = Modifier.fillMaxSize().onPreviewKeyEvent(::handleKey)) {
-        // Nothing is drawn until the local layout is read, which takes milliseconds and never touches the network.
-        if (currentDoc != null) {
+        if (screen == Screen.PICK_PROFILE) {
+            ProfilePickerScreen(
+                profiles = profilesView,
+                currentId = profileId ?: deps.settings.currentProfileId,
+                onPick = ::pick,
+                onAdd = { overlay = Overlay.TextInput(context.getString(R.string.new_profile_name), "") { profileActions.add(it) } },
+            )
+        } else if (currentDoc != null) {
+            // Nothing is drawn until the local layout is read, which takes milliseconds and never touches the network.
             when (screen) {
-                Screen.HOME -> HomeScreen(
+                Screen.HOME, Screen.PICK_PROFILE -> HomeScreen(
                     rows = rows,
                     apps = byPackage,
                     visuals = deps.visuals,
-                    topBar = { TopBar(currentDoc.topBar, hasInputs = inputs.isNotEmpty(), actions = topBarActions) },
+                    topBar = {
+                        TopBar(
+                            items = currentDoc.topBar,
+                            profileName = currentDoc.profile.name,
+                            hasInputs = inputs.isNotEmpty(),
+                            actions = topBarActions,
+                        )
+                    },
                     actions = tileActions,
                 )
                 Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
@@ -205,13 +328,31 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
                 }
             }
 
-            overlay?.let { current ->
+            moving?.let { m ->
+                Text(
+                    text = stringResource(R.string.moving_hint, m.label),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 24.dp),
+                )
+            }
+        }
+
+        // Dialogs. Most need the open profile's layout; PIN entry and naming also work from the picker.
+        overlay?.let { current ->
+            val needsDoc = current !is Overlay.PinEntry && current !is Overlay.TextInput
+            val shownDoc = currentDoc
+            if (shownDoc != null || !needsDoc) {
                 OverlayHost(
                     overlay = current,
                     ctx = OverlayContext(
-                        doc = currentDoc,
+                        doc = shownDoc ?: LayoutDocument(profileId = "p_none", profile = Profile("")),
                         apps = byPackage,
                         inputs = inputs,
+                        profiles = profilesView,
+                        launchOnBoot = launchOnBoot,
                         deps = deps,
                         show = { overlay = it },
                         edit = edit,
@@ -222,18 +363,12 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
                         },
                         openFolder = { openFolderId = it },
                         openEditRows = { screen = Screen.EDIT_ROWS },
+                        setLaunchOnBoot = { pkg ->
+                            launchOnBoot = pkg
+                            deps.settings.launchOnBoot = pkg
+                        },
+                        profile = profileActions,
                     ),
-                )
-            }
-
-            moving?.let { m ->
-                Text(
-                    text = stringResource(R.string.moving_hint, m.label),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 24.dp),
                 )
             }
         }

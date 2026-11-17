@@ -6,7 +6,7 @@ object DefaultLayout {
     const val FAVORITES_ROW_ID = "favorites"
     private const val FAVORITES_LIMIT = 8
 
-    val TOP_BAR = listOf("clock", "inputs", "network", "settings")
+    val TOP_BAR = listOf("clock", "profile", "inputs", "network", "settings")
 
     /** One Favorites row seeded with the first few TV apps, plus the standard top bar. */
     fun create(tvApps: List<String>, profileId: String = PROFILE_ID, name: String = "Home"): LayoutDocument =

@@ -35,6 +35,7 @@ class TopBarActions(
     val onInputs: () -> Unit,
     val onNetwork: () -> Unit,
     val onSettings: () -> Unit,
+    val onProfile: () -> Unit,
 )
 
 /**
@@ -42,7 +43,13 @@ class TopBarActions(
  * buttons on the right. Unknown items (for example widget feeds before Phase 3) are skipped.
  */
 @Composable
-fun TopBar(items: List<String>, hasInputs: Boolean, actions: TopBarActions, modifier: Modifier = Modifier) {
+fun TopBar(
+    items: List<String>,
+    profileName: String,
+    hasInputs: Boolean,
+    actions: TopBarActions,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -53,6 +60,7 @@ fun TopBar(items: List<String>, hasInputs: Boolean, actions: TopBarActions, modi
         Button(onClick = actions.onAllApps) { Text(stringResource(R.string.all_apps)) }
         for (item in items) {
             when (item) {
+                "profile" -> Button(onClick = actions.onProfile) { Text(profileName) }
                 "inputs" -> if (hasInputs) Button(onClick = actions.onInputs) { Text(stringResource(R.string.inputs)) }
                 "network" -> NetworkButton(onClick = actions.onNetwork)
                 "settings" -> Button(onClick = actions.onSettings) { Text(stringResource(R.string.settings)) }
