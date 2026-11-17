@@ -3,9 +3,9 @@ name: Android
 on:
   push:
     branches: [main]
-    paths: ["android/**", ".github/workflows/android.yml"]
+    paths: ["android/**", "schema/**", ".github/workflows/android.yml"]
   pull_request:
-    paths: ["android/**", ".github/workflows/android.yml"]
+    paths: ["android/**", "schema/**", ".github/workflows/android.yml"]
 
 jobs:
   build:
@@ -21,7 +21,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK, unit tests, lint
-        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest lintDebug
+        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest :core-layout:test lintDebug
       - uses: actions/upload-artifact@v4
         with:
           name: banditbox-debug-apk
