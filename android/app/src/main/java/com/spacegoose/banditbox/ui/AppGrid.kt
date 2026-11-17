@@ -27,6 +27,7 @@ fun AppGrid(
     apps: List<AppEntry>,
     visuals: AppVisuals,
     actions: TileActions,
+    place: Place,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -43,7 +44,7 @@ fun AppGrid(
                     visuals = visuals,
                     spec = GRID_TILE,
                     onClick = { actions.onOpen(app) },
-                    onLongClick = { actions.onMenu(app) },
+                    onLongClick = { actions.onAppMenu(app, place) },
                 )
             }
         }
@@ -57,16 +58,31 @@ fun AllAppsScreen(title: String, apps: List<AppEntry>, visuals: AppVisuals, acti
         apps = apps,
         visuals = visuals,
         actions = actions,
+        place = Place.AllApps,
         modifier = Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp),
     )
 }
 
 /** A folder opened from a row. Back closes it. */
 @Composable
-fun FolderDialog(name: String, apps: List<AppEntry>, visuals: AppVisuals, actions: TileActions, onDismiss: () -> Unit) {
+fun FolderDialog(
+    folderId: String,
+    name: String,
+    apps: List<AppEntry>,
+    visuals: AppVisuals,
+    actions: TileActions,
+    onDismiss: () -> Unit,
+) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(shape = RoundedCornerShape(20.dp), modifier = Modifier.padding(64.dp)) {
-            AppGrid(title = name, apps = apps, visuals = visuals, actions = actions, modifier = Modifier.padding(24.dp))
+            AppGrid(
+                title = name,
+                apps = apps,
+                visuals = visuals,
+                actions = actions,
+                place = Place.InFolder(folderId),
+                modifier = Modifier.padding(24.dp),
+            )
         }
     }
 }

@@ -2,21 +2,60 @@
 <resources>
     <string name="app_name">BanditBox</string>
     <string name="all_apps">All apps</string>
-    <string name="empty_home">Nothing here yet. Press Menu or open All apps to find your apps.</string>
+    <string name="empty_home">Nothing here yet. Long-press an app in All apps and choose Add to row.</string>
 
+    <!-- App menu -->
     <string name="action_open">Open</string>
+    <string name="action_move">Move</string>
     <string name="action_app_settings">App settings</string>
     <string name="action_app_info">App info</string>
     <string name="action_force_close">Force close</string>
     <string name="action_uninstall">Uninstall</string>
     <string name="cannot_open">Couldn\'t open that</string>
+    <string name="add_to_row">Add to row…</string>
+    <string name="add_to_folder">Add to folder…</string>
+    <string name="remove_from_row">Remove from row</string>
+    <string name="remove_from_folder">Remove from folder</string>
+    <string name="hide_app">Hide</string>
+    <string name="moving_hint">Moving %1$s. Use ◀ ▶, then press OK.</string>
 
+    <!-- Folders and rows -->
+    <string name="new_row">New row…</string>
+    <string name="new_folder">New folder…</string>
+    <string name="row_name">Row name</string>
+    <string name="folder_name">Folder name</string>
+    <string name="row_untitled">Untitled row</string>
+    <string name="rename">Rename</string>
+    <string name="delete">Delete</string>
+    <string name="delete_folder">Delete folder</string>
+    <string name="delete_folder_confirm">Delete the folder %1$s? The apps stay installed.</string>
+    <string name="delete_row_confirm">Delete the row %1$s? The apps stay installed.</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="edit_rows">Edit rows</string>
+    <string name="add_row">Add row</string>
+    <string name="move_up">Up</string>
+    <string name="move_down">Down</string>
+    <string name="size_small">Small</string>
+    <string name="size_medium">Medium</string>
+    <string name="size_large">Large</string>
+    <string name="style_banner">Banner</string>
+    <string name="style_icon">Icon</string>
+    <string name="shape_rounded">Rounded</string>
+    <string name="shape_square">Square</string>
+    <string name="shape_circle">Circle</string>
+
+    <!-- Hidden apps -->
+    <string name="hidden_apps">Hidden apps</string>
+    <string name="hidden_apps_title">Hidden apps (select to show again)</string>
+    <string name="no_hidden_apps">No hidden apps</string>
+
+    <!-- Top bar and settings -->
     <string name="inputs">Inputs</string>
     <string name="settings">Settings</string>
     <string name="android_settings">Android settings</string>
     <string name="network_settings">Network &amp; Internet</string>
     <string name="install_unknown_apps">Install unknown apps</string>
-
     <string name="network">Network</string>
     <string name="network_ethernet">Ethernet</string>
     <string name="network_wifi">Wi-Fi</string>

@@ -174,5 +174,8 @@ sealed interface ItemRef {
 
         fun parse(raw: String): ItemRef =
             if (raw.startsWith(FOLDER_PREFIX)) FolderRef(raw.removePrefix(FOLDER_PREFIX)) else App(raw)
+
+        /** The raw row item that points at a folder. */
+        fun folder(folderId: String): String = FOLDER_PREFIX + folderId
     }
 }
