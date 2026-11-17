@@ -31,11 +31,11 @@ This is the starting brief for a developer or coding agent picking up BanditBox.
 
 | Part | Choice | Notes |
 | --- | --- | --- |
-| TV app | Kotlin, Jetpack Compose for TV (`androidx.tv:tv-material`) | Single activity. minSdk 28 (Android 9) so older Fire TV devices work; to be confirmed |
+| TV app | Kotlin, Jetpack Compose for TV (`androidx.tv:tv-material`) | Single activity. minSdk 30 (Android 11), which covers Nvidia Shield (Android 11) and onn 4K (Google TV, Android 12+) |
 | TV images | Coil with a capped memory cache | Banners are pre-sized by the server |
 | TV storage | Room for the cache and the change queue; DataStore for small settings; EncryptedSharedPreferences for the device token | |
 | TV networking | OkHttp (REST + WebSocket), kotlinx.serialization | No Retrofit, to keep the dependency count low |
-| Server | **Go** (recommended; *open*: Kotlin/Ktor instead) | Go idles around 20 MB. Ktor shares code with the app but idles around 150 MB |
+| Server | **Go** (decided 2026-11-17) | Idles around 20 MB of RAM; single static binary in the Docker image |
 | Server DB | SQLite (`modernc.org/sqlite`, no CGO) | Single file in `/config` |
 | Web UI | SvelteKit, `adapter-static`, served by the Go binary | No Node at runtime |
 | Discovery | mDNS `_banditbox._tcp` | |
@@ -118,13 +118,13 @@ Package names in this example are placeholders.
 - The WebSocket is open only while the launcher is in the foreground.
 - If the token is revoked, the TV keeps its last layout and shows a "not synced" state.
 
-## 7. Home button override (Google TV / Fire TV)
+## 7. Home button override (onn 4K / Google TV, Shield)
 
-1. Register as a normal `HOME` activity. That is enough on Shield, onn Android TV and most stock Android TV devices.
-2. On Google TV (`com.google.android.apps.tv.launcherx`) and Fire TV (`com.amazon.tv.launcher`), an **optional accessibility service** in `guard/` watches for the stock launcher's window coming to the front and immediately starts BanditBox. This is the same approach Projectivy uses.
+1. Register as a normal `HOME` activity. That is enough on Nvidia Shield (stock Android TV) and most stock Android TV devices.
+2. On Google TV devices such as the onn 4K (`com.google.android.apps.tv.launcherx`), and later Fire TV (`com.amazon.tv.launcher`), an **optional accessibility service** in `guard/` watches for the stock launcher's window coming to the front and immediately starts BanditBox. This is the same approach Projectivy uses.
 3. A setup screen walks the user through enabling the service.
 4. The web UI shows ADB commands for power users who want to set the home activity directly or disable the stock launcher.
-5. **Risk:** Amazon has blocked this in some Fire OS updates. Keep a test matrix for each Fire OS version.
+5. **Risk:** Google TV updates could change how the stock launcher behaves; retest on the onn 4K after each update. Fire TV is not a Phase 1 target, and Amazon has blocked this in some Fire OS updates.
 
 The same service also handles remote **key remapping** and **kids enforcement**: if a kids profile opens an app that isn't approved, the service sends the user back to the launcher.
 
@@ -154,7 +154,7 @@ The same service also handles remote **key remapping** and **kids enforcement**:
 4. **Build the app index** (`core-apps`): installed leanback and launcher apps, banners with icon fallback, and the long-press menu (Open, App Info, App Settings, Force Close via App Info, Uninstall, Launch on Boot).
 5. **Build the layout renderer** (`core-layout`): rows, adjustable tiles, folders, hidden apps, and a top bar with clock, inputs, network and settings.
 6. **Add profiles**: a picker, PIN lock, auto-login at boot (a `BOOT_COMPLETED` receiver).
-7. **Write the guard service**: Home override for Google TV and Fire TV, plus key remapping.
+7. **Write the guard service**: Home override for Google TV (onn 4K), plus key remapping.
 8. **Add local backup and restore** of all layout documents as one JSON file.
 9. **Set a RAM budget check**: measure with `dumpsys meminfo` on a 2 GB device in CI or by hand, and fail the release if idle use goes over 80 MB.
 10. **Set up a release pipeline**: a signed APK on GitHub Releases. The same key is later used for self-update from the server.
@@ -170,18 +170,18 @@ Phase 2 starts with `server/` (pairing + sync endpoints), then `web/` (Devices a
 
 ## 12. Open decisions (owner to answer)
 
-- [ ] **Server language**: Go (recommended) or Kotlin/Ktor?
+- [x] **Server language**: Go (decided 2026-11-17).
 - [ ] **Distribution**: sideload and self-update only, or also Google Play / Amazon Appstore? Play may reject the accessibility service.
 - [ ] **Open source or private**: an Unraid Community Apps listing needs a public image and template.
 - [ ] **Kids lock strength**: soft lock only, or offer device-owner mode?
-- [ ] **Minimum devices** for Phase 1 (Chromecast with Google TV, Fire TV Stick, Shield, onn): this sets the minSdk and the test matrix.
+- [x] **Phase 1 devices**: onn 4K and Nvidia Shield (decided 2026-11-17). minSdk 30; both are the test matrix and the 80 MB RAM target is measured on the onn 4K.
 - [ ] **Remote access**: LAN only, or support managing TVs through Tailscale or a reverse proxy?
 - [ ] **Cinemask**: what it should show on the TV.
 - [ ] **Monorepo or separate repos**: this handoff assumes a monorepo.
 
 ## 13. Risks
 
-- Fire OS updates may break the Home override.
+- Google TV updates may change the Home override on the onn 4K; Fire TV (later) is riskier still.
 - Reading other apps' Watch Next and preview channels needs an ADB permission grant on many devices.
 - Play policy on accessibility services.
 - A low-RAM budget with animated themes: keep animation opt-in, with static fallbacks below 2 GB.
