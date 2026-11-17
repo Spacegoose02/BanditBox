@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "BanditBox"
 include(":app")
 include(":core-layout")
+include(":core-apps")
