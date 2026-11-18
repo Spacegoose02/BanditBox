@@ -68,6 +68,78 @@ export interface RestoreResult {
 	changed: number;
 }
 
+export interface ConnectorField {
+	key: string;
+	label: string;
+	help?: string;
+	placeholder?: string;
+	required?: boolean;
+	secret?: boolean;
+}
+
+export interface ConnectorKind {
+	id: string;
+	name: string;
+	description: string;
+	fields: ConnectorField[];
+	feeds: { suffix: string; name: string; template: string }[];
+}
+
+export interface ConnectorStatus {
+	lastRun?: string;
+	lastOk?: string;
+	lastError?: string;
+	nextRun?: string;
+	feeds: string[];
+}
+
+export interface Connector {
+	id: string;
+	kind: string;
+	name: string;
+	enabled: boolean;
+	settings: Record<string, string>;
+	created: string;
+	hasKey: boolean;
+	status?: ConnectorStatus;
+}
+
+export interface FeedCard {
+	id: string;
+	title: string;
+	subtitle?: string;
+	image?: string;
+	badge?: string;
+	weather?: { temp: number; unit: string; label?: string; high?: number; low?: number };
+	score?: {
+		state: string;
+		home: { name: string; abbr?: string; score?: string | null };
+		away: { name: string; abbr?: string; score?: string | null };
+		detail?: string;
+	};
+	stat?: { value: string; unit?: string };
+}
+
+/** A widget feed (schema/widget-feed.schema.json). */
+export interface WidgetFeed {
+	id: string;
+	name: string;
+	template: 'cardRow' | 'stat' | 'weather' | 'nowPlaying' | 'scoreboard';
+	sizes?: string[];
+	kidsSafe: boolean;
+	error?: string;
+	updatedAt?: string;
+	cards: FeedCard[];
+}
+
+export interface ConnectorInput {
+	id?: string;
+	kind?: string;
+	name?: string;
+	enabled?: boolean;
+	settings?: Record<string, string>;
+}
+
 /** A layout document (schema/layout.schema.json). Kept loose: the editor works on plain JSON. */
 export type Layout = Record<string, unknown> & { profileId: string; version: number };
 
@@ -143,6 +215,18 @@ export const api = {
 		request<RestoreResult>('POST', `/backups/${encodeURIComponent(name)}/restore`),
 	restoreFile: (file: unknown) => request<RestoreResult>('POST', '/backups/restore', file),
 	backupUrl: (name: string) => `/api/v1/backups/${encodeURIComponent(name)}`,
+
+	connectorKinds: () => request<ConnectorKind[]>('GET', '/connectors/kinds'),
+	connectors: () => request<Connector[]>('GET', '/connectors'),
+	createConnector: (c: ConnectorInput) => request<Connector>('POST', '/connectors', c),
+	updateConnector: (id: string, c: ConnectorInput) =>
+		request<Connector>('PUT', `/connectors/${encodeURIComponent(id)}`, c),
+	deleteConnector: (id: string) => request<void>('DELETE', `/connectors/${encodeURIComponent(id)}`),
+	testConnector: (c: ConnectorInput) =>
+		request<{ feeds: WidgetFeed[] }>('POST', '/connectors/test', c),
+	refreshConnector: (id: string) =>
+		request<void>('POST', `/connectors/${encodeURIComponent(id)}/refresh`),
+	feeds: () => request<{ version: number; feeds: WidgetFeed[] }>('GET', '/connectors/feeds'),
 
 	apks: () => request<Apk[]>('GET', '/apks'),
 	installApk: (sha: string, devices: string[]) =>

@@ -21,6 +21,8 @@ export interface Row {
 	limit?: number;
 	/** channel rows */
 	package?: string;
+	/** widget rows: "<plugin>.<feed>" */
+	feed?: string;
 	[key: string]: unknown;
 }
 
@@ -35,6 +37,7 @@ export type LayoutDoc = Layout & {
 	rows: Row[];
 	folders?: Folder[];
 	hiddenApps?: string[];
+	topBar?: string[];
 };
 
 export interface KnownApp {
@@ -82,6 +85,9 @@ export function deleteFolder(doc: LayoutDoc, id: string) {
 export function problems(doc: LayoutDoc): string[] {
 	const out: string[] = [];
 	if (!doc.profile.name.trim()) out.push('The profile needs a name.');
+	for (const r of doc.rows) {
+		if (r.type === 'widget' && !r.feed) out.push('Every widget row needs a feed.');
+	}
 	for (const f of doc.folders ?? []) {
 		if (!f.name.trim()) out.push('Every folder needs a name.');
 	}

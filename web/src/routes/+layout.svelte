@@ -49,6 +49,7 @@
 		{ href: '/devices', label: 'Devices' },
 		{ href: '/profiles', label: 'Profiles' },
 		{ href: '/apps', label: 'Apps' },
+		{ href: '/integrations', label: 'Integrations' },
 		{ href: '/settings', label: 'Settings' }
 	];
 </script>
