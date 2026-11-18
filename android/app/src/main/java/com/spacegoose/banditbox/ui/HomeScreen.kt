@@ -29,6 +29,7 @@ import com.spacegoose.banditbox.layout.HomeRow
 import com.spacegoose.banditbox.layout.ItemRef
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
+import com.spacegoose.banditbox.layout.WidgetFeed
 
 /** Where a tile was long-pressed, which decides what its menu offers. */
 sealed interface Place {
@@ -72,13 +73,17 @@ private sealed interface Drawn {
     class AskPermission(val row: ContentRow) : Drawn {
         override val key: String get() = row.id
     }
+
+    class Widget(val id: String, val title: String, val feed: WidgetFeed) : Drawn {
+        override val key: String get() = id
+    }
 }
 
 /**
  * Content rows with nothing to show are skipped, like empty app rows. Until BanditBox may
  * read TV listings, only the first content row is drawn, as a card asking for permission.
  */
-private fun drawnRows(rows: List<HomeRow>, content: ContentState): List<Drawn> {
+private fun drawnRows(rows: List<HomeRow>, content: ContentState, widgets: WidgetState): List<Drawn> {
     var asked = false
     return rows.mapNotNull { row ->
         when (row) {
@@ -89,6 +94,10 @@ private fun drawnRows(rows: List<HomeRow>, content: ContentState): List<Drawn> {
                     .takeIf { it.isNotEmpty() }
                     ?.let { Drawn.Cards(row.row, it) }
             }
+            // A feed the server or the app hasn't sent (yet), or with no cards, is skipped.
+            is HomeRow.Widget -> widgets.feed(row.row.feed)
+                ?.takeIf { it.cards.isNotEmpty() }
+                ?.let { Drawn.Widget(row.id, row.row.title ?: it.name, it) }
         }
     }
 }
@@ -100,11 +109,12 @@ fun HomeScreen(
     apps: Map<String, AppEntry>,
     visuals: AppVisuals,
     content: ContentState,
+    widgets: WidgetState,
     topBar: @Composable () -> Unit,
     actions: TileActions,
     modifier: Modifier = Modifier,
 ) {
-    val drawn = remember(rows, content.tv, content.allowed) { drawnRows(rows, content) }
+    val drawn = remember(rows, content.tv, content.allowed, widgets) { drawnRows(rows, content, widgets) }
     // Start with the first tile focused, so the first D-pad press moves instead of only highlighting.
     val firstTile = remember { FocusRequester() }
     val firstAppsRow = drawn.indexOfFirst { it is Drawn.Apps && it.row.firstShown(apps) >= 0 }
@@ -127,6 +137,7 @@ fun HomeScreen(
                     is Drawn.Apps -> AppsRow(row.row, apps, visuals, actions, if (index == firstAppsRow) firstTile else null)
                     is Drawn.Cards -> ContentRowView(content.titleFor(row.row), row.row.size, row.programs, content.onOpen)
                     is Drawn.AskPermission -> ContentPermissionRow(content.titleFor(row.row), content.onAllow)
+                    is Drawn.Widget -> WidgetRowView(row.title, row.feed, widgets)
                 }
             }
         }

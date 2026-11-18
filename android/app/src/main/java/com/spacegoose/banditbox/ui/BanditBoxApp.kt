@@ -80,6 +80,9 @@ import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
 import com.spacegoose.banditbox.ui.theme.kidsSafe
 import com.spacegoose.banditbox.layout.summary
 import com.spacegoose.banditbox.sync.DiskCopy
+import com.spacegoose.banditbox.sync.WidgetSnapshot
+import com.spacegoose.banditbox.layout.WidgetFeeds
+import com.spacegoose.banditbox.system.WidgetLaunch
 import com.spacegoose.banditbox.sync.SyncController
 import com.spacegoose.banditbox.system.BackupFiles
 import com.spacegoose.banditbox.system.BackupSource
@@ -92,6 +95,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -721,6 +725,36 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
         )
     }
 
+    // ---- Widget rows and top bar widgets ----
+    val noWidgets = remember { MutableStateFlow(WidgetSnapshot.EMPTY) }
+    val serverWidgets by (deps.sync?.widgets ?: noWidgets).collectAsState()
+    val widgetKids = currentDoc?.profile?.kids != null
+    val widgetState = remember(serverWidgets, widgetKids, contentAllowed) {
+        WidgetState(
+            feeds = serverWidgets.feeds,
+            kids = widgetKids,
+            allowed = contentAllowed,
+            image = { ref ->
+                when {
+                    ref == null -> null
+                    ref.startsWith("http") || ref.startsWith("content://") || ref.startsWith("android.resource://") -> ref
+                    else -> WidgetFeeds.mediaSha(ref)?.let { deps.sync?.mediaUrl(it) }
+                }
+            },
+            onOpen = { card, feed -> deps.launch(WidgetLaunch.intents(card, feed, context.packageManager)) },
+            onMenu = { card, feed ->
+                overlay = Overlay.Choices(
+                    title = card.title,
+                    choices = card.actions.map { a ->
+                        Choice(a.label) {
+                            deps.launch(WidgetLaunch.intents(a.link, card.packageName ?: feed.packageName, context.packageManager))
+                        }
+                    },
+                )
+            },
+        )
+    }
+
     /** Lists the channels apps have published, to add one as a row. */
     fun pickChannel() {
         if (!deps.tv.hasPermission()) {
@@ -838,6 +872,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                     apps = byPackage,
                     visuals = deps.visuals,
                     content = contentState,
+                    widgets = widgetState,
                     topBar = {
                         TopBar(
                             items = currentDoc.topBar,
@@ -846,6 +881,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                             actions = topBarActions,
                             kidsMode = currentDoc.profile.kids != null,
                             note = kidsStatus?.minutesLeft?.let { stringResource(R.string.kids_time_left, duration(context, it)) },
+                            feed = widgetState::feed,
                         )
                     },
                     actions = tileActions,

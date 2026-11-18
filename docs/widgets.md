@@ -18,6 +18,8 @@ The BanditBox server fetches web services on a schedule and hands the feeds to e
 | BingeBandit | `bingebandit.continue-watching`, `bingebandit.recent` (card rows) | `GET /api/rows?key=continue` and `key=recent` | An API key (`bb_…`) from BingeBandit's Account, API keys. The rows show that account's titles, so they are hidden on kids profiles |
 | Widget feed (JSON) | `<id>.<feed>` for each feed it serves | Any address serving widget feed JSON: one feed, or `{"feeds": [...]}` | Optional Bearer key |
 
+On the TV, feeds are cached on disk, so widget rows draw at once after a restart and while the server is down. The TV fetches them after each sync and whenever the server announces a change while the launcher is in front. Widget rows whose feed has no cards (or that the server doesn't have) are skipped, like empty app rows. On a kids profile only `kidsSafe` feeds show, and only cards for approved apps. Selecting a card opens its `link` in the feed's app, or the app itself; long-press shows the card's `actions`.
+
 Fetch times: weather every 10 minutes, scores every 15 minutes (every minute in the hour before a game, every 30 seconds while one is live), BingeBandit every 2 minutes, JSON feeds as their `refreshSec` says (5 minutes if they don't). A failed fetch keeps the last good cards and tries again within 2 minutes. A second connector of the same kind gets the id `weatherscout2`, so its feed is `weatherscout2.now`.
 
 The JSON connector is the way in for anything else, Cinemask included: serve a feed in the format below and add its address.

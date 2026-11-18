@@ -23,6 +23,8 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.spacegoose.banditbox.R
+import com.spacegoose.banditbox.layout.WidgetFeed
+import com.spacegoose.banditbox.layout.WidgetFeeds
 import com.spacegoose.banditbox.system.NetworkKind
 import com.spacegoose.banditbox.system.networkKind
 import kotlinx.coroutines.delay
@@ -39,8 +41,8 @@ class TopBarActions(
 )
 
 /**
- * The top bar, drawn from the layout's topBar list in order. The clock sits on the left,
- * buttons on the right. Unknown items (for example widget feeds before Phase 3) are skipped.
+ * The top bar, drawn from the layout's topBar list in order. The clock and widget feeds (such
+ * as the weather) sit on the left, buttons on the right. Unknown items are skipped.
  */
 @Composable
 fun TopBar(
@@ -53,6 +55,8 @@ fun TopBar(
     kidsMode: Boolean = false,
     /** Shown after the clock, for example a kids profile's time left today. */
     note: String? = null,
+    /** Looks up a widget feed named in [items], as the open profile may see it. */
+    feed: (String) -> WidgetFeed? = { null },
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -60,6 +64,9 @@ fun TopBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if ("clock" in items) Clock()
+        for (item in items) {
+            if (WidgetFeeds.isFeedId(item)) feed(item)?.let { TopBarFeed(it) }
+        }
         if (note != null) {
             Text(text = note, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         }
