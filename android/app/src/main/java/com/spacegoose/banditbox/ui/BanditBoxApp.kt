@@ -79,6 +79,8 @@ import com.spacegoose.banditbox.system.WallpaperFiles
 import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
 import com.spacegoose.banditbox.ui.theme.kidsSafe
 import com.spacegoose.banditbox.layout.summary
+import com.spacegoose.banditbox.sync.DiskCopy
+import com.spacegoose.banditbox.sync.SyncController
 import com.spacegoose.banditbox.system.BackupFiles
 import com.spacegoose.banditbox.system.BackupSource
 import com.spacegoose.banditbox.system.SystemShortcuts
@@ -121,6 +123,10 @@ class LauncherDeps(
     val restart: () -> Unit,
     /** A kids profile opened (true) or closed: the activity switches to the kids-safe theme. */
     val onKidsMode: (Boolean) -> Unit = {},
+    /** Held while reading or writing [store]; sync holds it too. */
+    val storeLock: Mutex = Mutex(),
+    /** Keeps layouts in step with a BanditBox server; null in previews. */
+    val sync: SyncController? = null,
 )
 
 /** A remote button shortcut asked for a screen. [id] tells two requests for the same screen apart. */
@@ -141,7 +147,8 @@ private class Moving(val rowId: String, val item: String, val label: String)
 fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, foreground: Boolean) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val storeLock = remember { Mutex() }
+    val storeLock = deps.storeLock
+    val diskCopy = remember { DiskCopy() }
 
     val appsFlow = remember(deps.index) { deps.index.apps() }
     val apps by appsFlow.collectAsState(initial = null)
@@ -201,7 +208,8 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
         doc = null
         doc = withContext(Dispatchers.IO) {
             storeLock.withLock {
-                deps.store.load(id) ?: deps.store.loadOrCreate(DefaultLayout.PROFILE_ID) { DefaultLayout.create(tvApps()) }
+                (deps.store.load(id) ?: deps.store.loadOrCreate(DefaultLayout.PROFILE_ID) { DefaultLayout.create(tvApps()) })
+                    .also(diskCopy::loaded)
             }
         }
     }
@@ -212,8 +220,11 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             withContext(Dispatchers.IO) {
                 storeLock.withLock {
                     if (latest.profileId in deletedIds) return@withLock
+                    // A newer copy of this profile is on its way here; save that one instead.
+                    val shown = doc
+                    if (shown != null && shown.profileId == latest.profileId && shown !== latest) return@withLock
                     try {
-                        deps.store.save(latest)
+                        diskCopy.save(deps.store, latest)
                     } catch (e: IOException) {
                         Log.w("BanditBox", "Couldn't save layout", e)
                     }
@@ -227,6 +238,34 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
         }
     }
     LaunchedEffect(Unit) { inputs = withContext(Dispatchers.IO) { passthroughInputs(context) } }
+    // A sync changed layouts on disk: show the new copy, keeping any edit not saved yet.
+    LaunchedEffect(Unit) {
+        deps.sync?.results?.collect { result ->
+            val id = profileId
+            val moved = id?.let { result.renamed[it] }
+            var gone = false
+            if (moved == null && id != null && id in result.changed) {
+                // On the main thread under the lock, so no edit slips in between reading and showing.
+                storeLock.withLock<Unit> {
+                    val shown = doc?.takeIf { it.profileId == id } ?: return@withLock
+                    val next = diskCopy.reload(deps.store, shown)
+                    if (next == null) gone = true else doc = next
+                }
+            }
+            if (id != null && (gone || moved != null)) deletedIds += id
+            refreshProfiles()
+            when {
+                moved != null -> open(moved)
+                gone -> when (val start = Profiles.startup(profiles, null, freshBoot = false)) {
+                    is Startup.Open -> open(start.profileId)
+                    Startup.Pick -> screen = Screen.PICK_PROFILE
+                }
+            }
+            if (result.rejected.isNotEmpty() && overlay == null) {
+                overlay = Overlay.Message(context.getString(R.string.sync_settings), context.getString(R.string.sync_rejected, result.rejected.size))
+            }
+        }
+    }
 
     val edit: ((LayoutDocument) -> LayoutDocument) -> Unit = { change -> doc?.let { doc = change(it) } }
 

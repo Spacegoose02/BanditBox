@@ -11,6 +11,8 @@ import com.spacegoose.banditbox.layout.KidsPolicy
 import com.spacegoose.banditbox.layout.KidsRules
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.layout.Remap
+import com.spacegoose.banditbox.sync.SyncController
+import kotlinx.coroutines.sync.Mutex
 import java.io.File
 import java.io.IOException
 
@@ -27,6 +29,14 @@ class BanditBoxApplication : Application(), GuardHost {
         super.onCreate()
         Guard.host = this
     }
+
+    /** The one layout store the launcher writes to; sync records every save. */
+    val layouts by lazy { LayoutStore(File(filesDir, "layouts")) }
+
+    /** Held while reading or writing [layouts], by the launcher and by sync. */
+    val layoutsLock = Mutex()
+
+    val sync by lazy { SyncController(this, layouts, layoutsLock) }
 
     override fun remaps(): List<Remap> = remaps ?: readRemaps().also { remaps = it }
 

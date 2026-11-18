@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sync_settings">Sync with a server</string>
+    <string name="sync_intro">Keep home screens the same on every TV, and edit them from your phone or computer, with a BanditBox server on your network.\n\nIf the server already has home screens, this TV switches to them; a backup of this TV\'s is saved first. If the server is new, this TV\'s home screens are copied to it.</string>
+    <string name="sync_searching">Looking for servers…</string>
+    <string name="sync_use_server">Use %1$s</string>
+    <string name="sync_enter_address">Enter the server address</string>
+    <string name="sync_address_title">Server address, like 192.168.1.20:8686</string>
+    <string name="sync_connecting">Connecting to %1$s…</string>
+    <string name="sync_code_title">Approve this TV</string>
+    <string name="sync_code_help">On your phone or computer, open %1$s, go to Devices and approve this code.</string>
+    <string name="sync_paired">This TV now syncs with %1$s.</string>
+    <string name="sync_denied">The server turned this TV down.</string>
+    <string name="sync_expired">The code ran out before it was approved.</string>
+    <string name="sync_failed">Couldn\'t connect to %1$s: %2$s</string>
+    <string name="sync_try_again">Try again</string>
+    <string name="sync_on">Syncing with %1$s.</string>
+    <string name="sync_synced">Synced with %1$s, %2$s.</string>
+    <string name="sync_offline">Can\'t reach %1$s right now. Changes on this TV are kept and sent when it\'s back.</string>
+    <string name="sync_revoked">Not synced: %1$s no longer knows this TV. Its home screens stay as they are. Pair again to sync.</string>
+    <string name="sync_pair_again">Pair again</string>
+    <string name="sync_now">Sync now</string>
+    <string name="sync_stop">Stop syncing</string>
+    <string name="sync_stop_confirm">Stop syncing with %1$s? Home screens on this TV stay as they are. Remove the TV under Devices on the server too.</string>
+    <string name="sync_close">Close</string>
+    <string name="sync_rejected">%1$d changes from this TV weren\'t kept, because the same things were changed in the web app or on another TV.</string>
+</resources>
