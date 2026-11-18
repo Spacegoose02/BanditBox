@@ -60,12 +60,12 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 
 ## Phase 3: Integrations
 
-- [ ] Plugin/widget API: an on-device provider contract, server connectors, and a JSON schema for the widget feed
-- [ ] `banditbox-plugin-sdk` Android library, published
-- [ ] BingeBandit: Continue Watching row, plus sports and show cards
+- [x] Plugin/widget API: an on-device provider contract, server connectors, and a JSON schema for the widget feed
+- [x] `banditbox-plugin-sdk` Android library (published on `sdk-v*` tags)
+- [x] BingeBandit: Continue Watching row, plus sports and show cards
 - [ ] Wavelength widget and row
-- [ ] StatScraps scores and scoreboard tile (server connector)
-- [ ] Weather Scout weather widget next to the clock (server connector)
+- [x] StatScraps scores and scoreboard tile (server connector)
+- [x] Weather Scout weather widget next to the clock (server connector)
 - [ ] Cinemask (scope to be decided)
 - [ ] Watch Next and preview channels from other apps (Plex, YouTube and others), with guided ADB permission setup
 
