@@ -48,6 +48,7 @@
 	const nav = [
 		{ href: '/devices', label: 'Devices' },
 		{ href: '/profiles', label: 'Profiles' },
+		{ href: '/apps', label: 'Apps' },
 		{ href: '/settings', label: 'Settings' }
 	];
 </script>

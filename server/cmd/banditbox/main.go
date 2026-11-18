@@ -71,7 +71,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.NewHandler(api.Deps{Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hub.New(), Backups: backups, Log: log}),
+		Handler:           api.NewHandler(api.Deps{Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hub.New(), Backups: backups, APKDir: filepath.Join(dataDir, "apks"), Log: log}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

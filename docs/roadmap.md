@@ -38,16 +38,20 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 
 ## Phase 2: Master sync (Docker server + web UI)
 
-- [ ] One Docker container: Go API, static SvelteKit web UI, SQLite in `/config`
-- [ ] Web UI login: a local admin, with optional OIDC (Authentik or Authelia)
-- [ ] Unraid Community Apps template
-- [ ] Discovery on the LAN through mDNS (`_banditbox._tcp`)
-- [ ] Pairing with a QR code or a 6-digit code; each TV gets its own token, which can be revoked
-- [ ] "Sign in to sync" in the launcher's settings
-- [ ] Offline-first sync: a local cache, a queue of offline changes, and conflict rules (see handoff.md)
-- [ ] Web layout editor for each profile, with a live preview
-- [ ] Devices dashboard: push a layout to one TV or all of them, and set per-device overrides
-- [ ] Server-side backups: nightly snapshots and restore
+- [x] One Docker container: Go API, static SvelteKit web UI, SQLite in `/config`
+- [x] Web UI login: a local admin
+- [ ] Optional OIDC sign-in (Authentik or Authelia)
+- [x] Unraid template (`deploy/unraid/banditbox.xml`)
+- [ ] Listed in Community Apps
+- [x] Discovery on the LAN through mDNS (`_banditbox._tcp`)
+- [x] Pairing with a 6-digit code; each TV gets its own token, which can be revoked (a QR code on the TV is still to do)
+- [x] "Sign in to sync" in the launcher's settings
+- [x] Offline-first sync: a local cache, a queue of offline changes, and conflict rules (see handoff.md)
+- [x] Web layout editor for each profile
+- [ ] A live preview in the editor
+- [x] Push a profile to all TVs, and choose which profiles each TV gets
+- Per-device overrides: deferred (decided 2026-11-18), since choosing profiles per TV covers it for now
+- [x] Server-side backups: daily snapshots and restore
 - [ ] Self-update: the launcher installs new versions from the server
 - [ ] Push an APK from the browser to chosen TVs
 - [ ] Import from Projectivy

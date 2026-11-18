@@ -44,6 +44,25 @@ export interface BackupEntry {
 	profiles: number;
 }
 
+export interface Install {
+	deviceId: string;
+	sha256: string;
+	status: 'pending' | 'waiting' | 'installed' | 'skipped' | 'failed';
+	detail: string;
+	updated: string;
+}
+
+export interface Apk {
+	sha256: string;
+	package: string;
+	versionCode: number;
+	versionName: string;
+	fileName: string;
+	size: number;
+	uploaded: string;
+	installs: Install[];
+}
+
 export interface RestoreResult {
 	profiles: number;
 	changed: number;
@@ -123,7 +142,30 @@ export const api = {
 	restoreBackup: (name: string) =>
 		request<RestoreResult>('POST', `/backups/${encodeURIComponent(name)}/restore`),
 	restoreFile: (file: unknown) => request<RestoreResult>('POST', '/backups/restore', file),
-	backupUrl: (name: string) => `/api/v1/backups/${encodeURIComponent(name)}`
+	backupUrl: (name: string) => `/api/v1/backups/${encodeURIComponent(name)}`,
+
+	apks: () => request<Apk[]>('GET', '/apks'),
+	installApk: (sha: string, devices: string[]) =>
+		request<Apk>('POST', `/apks/${sha}/install`, { devices }),
+	deleteApk: (sha: string) => request<void>('DELETE', `/apks/${sha}`),
+	/** Uploads an APK file as the request body. */
+	async uploadApk(file: File): Promise<Apk> {
+		const res = await fetch('/api/v1/apks', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: {
+				'Content-Type': 'application/vnd.android.package-archive',
+				'X-File-Name': encodeURIComponent(file.name).slice(0, 200)
+			},
+			body: file
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) {
+			if (res.status === 401) onSignedOut();
+			throw new ApiError(res.status, String(data.error ?? res.statusText), data);
+		}
+		return data as Apk;
+	}
 };
 
 /** "3 minutes ago" style text for a timestamp. */

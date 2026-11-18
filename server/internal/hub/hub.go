@@ -24,6 +24,7 @@ type Sub struct {
 	mu       sync.Mutex
 	pending  map[string]int64
 	profiles bool
+	installs bool
 	kicked   bool
 }
 
@@ -82,6 +83,29 @@ func (h *Hub) Kick(deviceID string) {
 			s.signal()
 		}
 	}
+}
+
+// InstallsChanged tells a device's subscribers that it has apps to install.
+func (h *Hub) InstallsChanged(deviceID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for s := range h.subs {
+		if s.DeviceID == deviceID {
+			s.mu.Lock()
+			s.installs = true
+			s.mu.Unlock()
+			s.signal()
+		}
+	}
+}
+
+// TakeInstalls returns and clears whether the device has new apps to install.
+func (s *Sub) TakeInstalls() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := s.installs
+	s.installs = false
+	return i
 }
 
 // Count returns the number of subscribers.

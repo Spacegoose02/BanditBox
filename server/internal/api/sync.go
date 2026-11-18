@@ -124,7 +124,7 @@ func (s *server) syncOps(w http.ResponseWriter, r *http.Request, d store.Device)
 
 // streamMessage is sent over the sync WebSocket.
 type streamMessage struct {
-	Type      string `json:"type"` // "version", or "profiles": fetch /device/me again
+	Type      string `json:"type"` // "version"; "profiles": fetch /device/me again; "installs": fetch /device/installs
 	ProfileID string `json:"profileId,omitempty"`
 	Version   int64  `json:"version,omitempty"`
 }
@@ -185,6 +185,11 @@ func (s *server) syncStream(w http.ResponseWriter, r *http.Request, d store.Devi
 			}
 			if profilesChanged {
 				if err := send(ctx, conn, streamMessage{Type: "profiles"}); err != nil {
+					return
+				}
+			}
+			if sub.TakeInstalls() {
+				if err := send(ctx, conn, streamMessage{Type: "installs"}); err != nil {
 					return
 				}
 			}

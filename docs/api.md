@@ -38,6 +38,10 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 | `PATCH /devices/{id}` | `{name?, profiles?}` | the device |
 | `DELETE /devices/{id}` | | 204. The token stops working and its stream closes |
 | `GET /apps` | | Apps installed on any paired TV, for the layout editor: `[{packageName, label, tv, devices}]`, by label. `tv` is true for apps with a TV launcher entry |
+| `GET /apks` | | Uploaded APKs, newest first: `[{sha256, package, versionCode, versionName, fileName, size, uploaded, installs: [{deviceId, status, detail, updated}]}]` |
+| `POST /apks` | the APK file, `Content-Type: application/vnd.android.package-archive`, optional `X-File-Name` | 201, the APK (package and version read from its manifest). 422 if it isn't an APK. At most 512 MB |
+| `POST /apks/{sha256}/install` | `{devices}` (`[]` = every TV) | the APK with its installs. TVs in front hear about it at once |
+| `DELETE /apks/{sha256}` | | 204. Installs not done yet are dropped |
 
 ## TV
 
@@ -51,6 +55,7 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 ### Sync
 
 - `PUT /device/apps {apps: [{packageName, label, tv}]}` → 204. The apps installed on the TV (at most 2000), replacing what it sent before. Send it after pairing and whenever the list changes.
+- `GET /device/installs` → `[apk]`: APKs to install, oldest first. Download each from `GET /device/apks/{sha256}`, check the hash, skip it if the same package is already at `versionCode` or newer, and report with `POST /device/installs/{sha256} {status, detail?}`: `waiting` (asking the user to confirm), `installed`, `skipped` or `failed`.
 - `GET /device/me` → `{device, profiles: [{id, name, version, updated}], server}`. 401 means the TV was revoked: keep the last layout and show "not synced".
 - `GET /sync/layout?profile=ID&since=V` → `{profileId, version, doc}`, or 204 if `V` is current.
 - `POST /sync/ops {profileId, baseVersion, ops}` → `{version, applied: [opId], rejected: [{opId, reason, detail?}], doc}`.
@@ -61,4 +66,4 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 - `POST /sync/seed {layouts: [doc]}` → `[{profileId, version, doc}]`. Only while `/device/me` says `fresh` (no layout ever edited) and only for a TV allowed every profile: replaces the server's profiles with the TV's own, so the first TV keeps its setup. 409 once the server isn't fresh.
 - `POST /sync/profiles` with a layout document → 201 `{profileId, version, doc}`: a profile made on the TV. A TV limited to some profiles gets it added to its list. 409 if the id exists.
 - `DELETE /sync/profiles/{id}` → 204: a profile deleted on the TV.
-- `GET /sync/stream` (WebSocket, open only while the launcher is in front). On connect the server sends `{"type":"version","profileId","version"}` for each allowed profile, then one whenever a profile changes. `{"type":"profiles"}` means profiles were added or removed, or this TV's allowed profiles changed: call `/device/me` again. Fetch the layout when the version is newer than yours. The server pings every 30 s. Close code 4401 means the TV was revoked.
+- `GET /sync/stream` (WebSocket, open only while the launcher is in front). On connect the server sends `{"type":"version","profileId","version"}` for each allowed profile, then one whenever a profile changes. `{"type":"profiles"}` means profiles were added or removed, or this TV's allowed profiles changed: call `/device/me` again. `{"type":"installs"}` means there are APKs to install: call `/device/installs`. Fetch the layout when the version is newer than yours. The server pings every 30 s. Close code 4401 means the TV was revoked.
