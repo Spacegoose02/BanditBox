@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/spacegoose02/banditbox/server/internal/api"
 	"github.com/spacegoose02/banditbox/server/internal/auth"
+	"github.com/spacegoose02/banditbox/server/internal/backup"
 	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/mdns"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
@@ -61,13 +63,15 @@ func main() {
 		log.Warn("first run: open the web UI and create the admin account with this setup code", "setupCode", code)
 	}
 	go cleanSessions(ctx, st, log)
+	backups := &backup.Manager{Dir: filepath.Join(dataDir, "backups"), Store: st, Version: version, Log: log}
+	go backups.Run(ctx)
 	if envOr("BANDITBOX_MDNS", "on") != "off" {
 		go advertise(ctx, addr, log)
 	}
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.NewHandler(api.Deps{Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hub.New(), Log: log}),
+		Handler:           api.NewHandler(api.Deps{Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hub.New(), Backups: backups, Log: log}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

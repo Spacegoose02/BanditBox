@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/spacegoose02/banditbox/server/internal/auth"
+	"github.com/spacegoose02/banditbox/server/internal/backup"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
 )
@@ -37,7 +39,8 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	au := auth.New(st)
-	srv := httptest.NewServer(NewHandler(Deps{Version: "test", Store: st, Auth: au, Pairing: pairing.New(st)}))
+	backups := &backup.Manager{Dir: filepath.Join(t.TempDir(), "backups"), Store: st, Version: "test"}
+	srv := httptest.NewServer(NewHandler(Deps{Version: "test", Store: st, Auth: au, Pairing: pairing.New(st), Backups: backups}))
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	return &env{t: t, srv: srv, auth: au, c: &http.Client{Jar: jar}}

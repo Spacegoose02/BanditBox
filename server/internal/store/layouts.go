@@ -230,3 +230,16 @@ type ValidationError struct{ Err error }
 
 func (e *ValidationError) Error() string { return "invalid layout: " + e.Err.Error() }
 func (e *ValidationError) Unwrap() error { return e.Err }
+
+// PushProfile makes the server's copy of a profile win on every TV: changes TVs made
+// before now and haven't sent yet are refused as stale, and those TVs take this copy.
+func (s *Store) PushProfile(ctx context.Context, profileID string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE profiles SET min_base = version WHERE id = ?`, profileID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

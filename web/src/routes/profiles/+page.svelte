@@ -35,6 +35,23 @@
 		}
 	}
 
+	let pushed = $state('');
+
+	async function push(p: ProfileSummary) {
+		if (
+			!confirm(
+				`Make every TV use the server's copy of ${p.name}? Changes made on a TV that haven't reached the server yet are dropped.`
+			)
+		)
+			return;
+		try {
+			await api.pushProfile(p.id);
+			pushed = `${p.name}: TVs will use the server's copy.`;
+		} catch (err) {
+			error = (err as Error).message;
+		}
+	}
+
 	async function remove(p: ProfileSummary) {
 		if (!confirm(`Delete the ${p.name} profile on every TV? This can't be undone.`)) return;
 		await api.deleteProfile(p.id).catch((err) => (error = err.message));
@@ -44,6 +61,7 @@
 
 <h1>Profiles</h1>
 {#if error}<p class="error" role="alert">{error}</p>{/if}
+{#if pushed}<p role="status">{pushed}</p>{/if}
 
 <section class="panel">
 	<table class="stack">
@@ -57,6 +75,7 @@
 					<td class="muted">{ago(p.updated)}</td>
 					<td class="row">
 						<a class="button" href="/profiles/edit?id={encodeURIComponent(p.id)}">Edit</a>
+						<button onclick={() => push(p)}>Push to all TVs</button>
 						<button class="danger" disabled={profiles.length < 2} onclick={() => remove(p)}
 							>Delete</button
 						>

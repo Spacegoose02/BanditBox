@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/spacegoose02/banditbox/server/internal/auth"
+	"github.com/spacegoose02/banditbox/server/internal/backup"
 	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
@@ -34,6 +35,7 @@ type Deps struct {
 	Auth    *auth.Auth
 	Pairing *pairing.Manager
 	Hub     *hub.Hub
+	Backups *backup.Manager
 	Log     *slog.Logger
 }
 
@@ -65,6 +67,13 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("PUT /api/v1/profiles/{id}/layout", s.admin(s.putLayout))
 	mux.HandleFunc("GET /api/v1/profiles/{id}/history", s.admin(s.layoutHistory))
 	mux.HandleFunc("DELETE /api/v1/profiles/{id}", s.admin(s.deleteProfile))
+	mux.HandleFunc("POST /api/v1/profiles/{id}/push", s.admin(s.pushProfile))
+
+	mux.HandleFunc("GET /api/v1/backups", s.admin(s.listBackups))
+	mux.HandleFunc("POST /api/v1/backups", s.admin(s.createBackup))
+	mux.HandleFunc("GET /api/v1/backups/{name}", s.admin(s.downloadBackup))
+	mux.HandleFunc("POST /api/v1/backups/{name}/restore", s.admin(s.restoreSaved))
+	mux.HandleFunc("POST /api/v1/backups/restore", s.admin(s.restoreUpload))
 
 	mux.HandleFunc("POST /api/v1/pair/start", s.pairStart)
 	mux.HandleFunc("GET /api/v1/pair/{pairId}", s.pairWait)

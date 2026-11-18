@@ -182,7 +182,8 @@ th {
 	}
 }
 
-a.button {
+a.button,
+label.button {
 	display: inline-block;
 	text-decoration: none;
 	border-radius: 8px;

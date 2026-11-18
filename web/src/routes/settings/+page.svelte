@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import { session } from '$lib/session.svelte';
+	import BackupsPanel from '$lib/components/BackupsPanel.svelte';
 
 	let current = $state('');
 	let next = $state('');
@@ -30,6 +31,8 @@
 </script>
 
 <h1>Settings</h1>
+
+<BackupsPanel />
 
 <form class="panel" onsubmit={change}>
 	<h2>Change password</h2>
