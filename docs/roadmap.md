@@ -90,7 +90,7 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 
 - [ ] Home Assistant/MQTT hooks (for example, dim the lights when a movie starts)
 - [ ] One search across apps and integrations
-- [ ] Sleep timer
+- [x] Sleep timer (screen-off still to be checked on the onn 4K and the Shield)
 - [ ] Ambient mode with photos from Immich or Plex
 
 ---

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_sleep_timer">Sleep timer (each press adds time)</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_timer_on">Sleep timer: %1$s left</string>
+    <string name="sleep_timer_off">Off</string>
+    <string name="sleep_timer_detail_service">When the time is up, playback pauses and the TV goes to sleep.</string>
+    <string name="sleep_timer_detail_no_service">When the time is up, playback pauses and BanditBox comes to the front. Turn on the BanditBox service in Home button setup so the timer can also turn the screen off.</string>
+    <string name="sleep_note">💤 %1$s</string>
+</resources>

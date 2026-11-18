@@ -40,6 +40,7 @@ sealed interface Overlay {
     data object ProfileSettings : Overlay
     data object Inputs : Overlay
     data object HiddenApps : Overlay
+    data object SleepTimer : Overlay
 
     // Remote button shortcuts, in the order the user goes through them.
     data object Buttons : Overlay
@@ -164,6 +165,7 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
             onDismiss = close,
         )
         Overlay.HiddenApps -> HiddenAppsDialog(ctx)
+        Overlay.SleepTimer -> SleepTimerDialog(ctx)
         Overlay.Buttons -> ButtonsDialog(ctx)
         is Overlay.ButtonRule -> ButtonRuleDialog(overlay.rule, ctx)
         Overlay.PickKey -> PickKeyDialog(ctx)
@@ -322,6 +324,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
             Choice(stringResource(R.string.theme)) { ctx.show(Overlay.Themes(ThemePage.Main)) },
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
             Choice(stringResource(R.string.buttons)) { ctx.show(Overlay.Buttons) },
+            Choice(sleepTimerLabel()) { ctx.show(Overlay.SleepTimer) },
             Choice(stringResource(R.string.backup)) { ctx.show(Overlay.Backup) },
             if (ctx.deps.sync != null && !ctx.isKids) Choice(stringResource(R.string.sync_settings)) { ctx.show(Overlay.Sync) } else null,
             Choice(stringResource(R.string.hidden_apps)) { ctx.show(Overlay.HiddenApps) },

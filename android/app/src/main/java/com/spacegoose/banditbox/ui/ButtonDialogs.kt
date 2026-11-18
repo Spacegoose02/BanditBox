@@ -157,6 +157,7 @@ fun PickActionDialog(key: String, press: Press, ctx: OverlayContext) {
         add(Choice(stringResource(R.string.action_all_apps)) { set(Action.AllApps) })
         add(Choice(stringResource(R.string.action_launcher_settings)) { set(Action.LauncherSettings) })
         add(Choice(stringResource(R.string.action_android_settings)) { set(Action.Settings) })
+        add(Choice(stringResource(R.string.action_sleep_timer)) { set(Action.SleepTimer) })
         add(Choice(stringResource(R.string.action_none)) { set(Action.None) })
     }
     ChoiceDialog(
@@ -222,5 +223,6 @@ private fun actionLabel(action: Action, ctx: OverlayContext): String = when (act
     Action.AllApps -> stringResource(R.string.action_all_apps)
     Action.LauncherSettings -> stringResource(R.string.action_launcher_settings)
     Action.Settings -> stringResource(R.string.action_android_settings)
+    Action.SleepTimer -> stringResource(R.string.action_sleep_timer)
     Action.None -> stringResource(R.string.action_none)
 }

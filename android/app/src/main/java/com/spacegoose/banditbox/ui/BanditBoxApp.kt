@@ -731,6 +731,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     val serverWidgets by (deps.sync?.widgets ?: noWidgets).collectAsState()
     // Apps on the TV that publish feeds (banditbox-plugin-sdk): read while in front, and again
     // when the installed apps change.
+    val sleepMinutes = rememberSleepMinutes()
     val plugins = remember { PluginFeeds(context) }
     val pluginWidgets by plugins.feeds.collectAsState()
     LaunchedEffect(foreground, byPackage.keys) { if (foreground) plugins.watch() }
@@ -887,7 +888,10 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                             hasInputs = inputs.isNotEmpty(),
                             actions = topBarActions,
                             kidsMode = currentDoc.profile.kids != null,
-                            note = kidsStatus?.minutesLeft?.let { stringResource(R.string.kids_time_left, duration(context, it)) },
+                            note = listOfNotNull(
+                                kidsStatus?.minutesLeft?.let { stringResource(R.string.kids_time_left, duration(context, it)) },
+                                sleepMinutes?.let { stringResource(R.string.sleep_note, duration(context, it)) },
+                            ).joinToString("  ").ifEmpty { null },
                             feed = widgetState::feed,
                         )
                     },

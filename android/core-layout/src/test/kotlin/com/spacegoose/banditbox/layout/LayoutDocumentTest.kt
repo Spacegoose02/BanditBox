@@ -34,6 +34,7 @@ class LayoutDocumentTest {
         assertEquals(Action.OpenInput("HDMI2"), doc.remap[0].action)
         assertEquals(Press.LONG, doc.remap[0].press)
         assertEquals(Action.AllApps, doc.remap[1].action)
+        assertEquals(Action.SleepTimer, doc.remap[2].action)
     }
 
     @Test

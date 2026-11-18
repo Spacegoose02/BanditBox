@@ -245,6 +245,10 @@ sealed interface Action {
     @Serializable @SerialName("launcherSettings")
     data object LauncherSettings : Action
 
+    /** Starts the sleep timer, or moves it to the next step: 15, 30, 45, 60, 90, 120 minutes, then off. */
+    @Serializable @SerialName("sleepTimer")
+    data object SleepTimer : Action
+
     @Serializable @SerialName("none")
     data object None : Action
 }

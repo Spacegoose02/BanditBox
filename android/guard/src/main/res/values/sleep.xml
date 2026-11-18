@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="sleep_in">
+        <item quantity="one">TV goes to sleep in %d minute</item>
+        <item quantity="other">TV goes to sleep in %d minutes</item>
+    </plurals>
+    <string name="sleep_off">Sleep timer off</string>
+    <string name="sleep_soon">TV goes to sleep in 1 minute</string>
+</resources>

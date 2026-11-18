@@ -240,7 +240,7 @@
           "additionalProperties": false
         },
         {
-          "properties": { "type": { "enum": ["home", "allApps", "settings", "launcherSettings", "none"] } },
+          "properties": { "type": { "enum": ["home", "allApps", "settings", "launcherSettings", "sleepTimer", "none"] } },
           "additionalProperties": false
         }
       ]
