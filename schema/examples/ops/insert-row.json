@@ -1,0 +1,8 @@
+{
+  "opId": "op_7f3a9c22",
+  "hlc": "1763430000001-00000",
+  "kind": "insert",
+  "path": "/rows/r_sports",
+  "after": "favorites",
+  "value": { "id": "r_sports", "type": "apps", "title": "Sports", "items": ["com.spacegoose.statscraps"] }
+}

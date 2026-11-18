@@ -6,6 +6,7 @@ JSON Schemas (draft 2020-12) shared by the TV app and the server. They are the s
 | --- | --- |
 | `layout.schema.json` | The layout document: one per profile, holding everything the TV shows |
 | `backup.schema.json` | A backup file: every profile's layout document, as made by Settings > Backup on the TV |
+| `op.schema.json` | One sync op: a change a TV made to a layout, sent to the server |
 
 `examples/` holds documents that must validate, and `examples/invalid/` holds documents that must be rejected. CI checks both, and the TV app's `core-layout` tests decode the same files.
 
@@ -24,3 +25,20 @@ Validate locally with `pipx run check-jsonschema --schemafile layout.schema.json
 ```
 check-jsonschema --base-uri "file://$PWD/backup.schema.json" --schemafile backup.schema.json examples/backup/*.json
 ```
+
+## Sync ops (v1)
+
+A TV records each change as an op and sends a batch with `POST /api/v1/sync/ops`. Paths address the layout document like JSON Pointer, with one difference: elements of **id-keyed arrays** (arrays whose elements are all objects with an `id`, which today means `rows` and `folders`) are addressed by id, not position. So `/rows/favorites/title` stays correct when someone else inserts a row above it.
+
+| kind | path | needs | does |
+| --- | --- | --- | --- |
+| `set` | an object field, or a keyed element | `value` | Replaces the value (creates an object field if missing). |
+| `insert` | `/rows/<new id>` | `value` (with that `id`), `after` | Adds the element after `after`, or first when `after` is null. |
+| `move` | `/rows/<id>` | `after` | Moves the element after `after`, or first. |
+| `delete` | an object field, or a keyed element | | Removes it. Deleting something already gone is fine. |
+
+Other arrays (`items`, `hiddenApps`, `topBar`, `remap`, `approvedApps`) are single values: change them with `set` on the whole array.
+
+`hlc` is a hybrid logical clock, `<13-digit Unix ms>-<5-digit counter>`, so later changes sort later as plain strings. It decides between two TVs that changed the same field.
+
+The server's conflict rules (handoff.md §6): when the web UI and a TV change the same path (or one changes a parent of the other), the web UI wins and the TV's op comes back as rejected; ops on different paths merge.
