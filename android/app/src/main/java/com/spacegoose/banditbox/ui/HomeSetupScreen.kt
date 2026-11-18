@@ -2,6 +2,7 @@ package com.spacegoose.banditbox.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -77,12 +78,21 @@ fun HomeSetupScreen(launch: (List<Intent>) -> Unit) {
         )
 
         Text(stringResource(R.string.home_setup_steps), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.home_setup_restricted), style = MaterialTheme.typography.bodyMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = { launch(listOf(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), Intent(Settings.ACTION_SETTINGS))) }) {
                 Text(stringResource(R.string.open_accessibility_settings))
             }
             Button(onClick = { launch(listOf(Intent(Settings.ACTION_HOME_SETTINGS), Intent(Settings.ACTION_SETTINGS))) }) {
                 Text(stringResource(R.string.open_home_settings))
+            }
+            Button(
+                onClick = {
+                    val appInfo = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                    launch(listOf(appInfo, Intent(Settings.ACTION_SETTINGS)))
+                },
+            ) {
+                Text(stringResource(R.string.open_app_info))
             }
         }
 
@@ -103,6 +113,7 @@ private fun adbCommands(context: Context, stockLauncher: String?): List<Pair<Str
     val service = GuardStatus.serviceComponent(context).flattenToString()
     return buildList {
         add(stringResource(R.string.adb_set_home) to "adb shell cmd package set-home-activity $home")
+        add(stringResource(R.string.adb_allow_restricted) to "adb shell appops set $pkg ACCESS_RESTRICTED_SETTINGS allow")
         add(stringResource(R.string.adb_enable_service) to "adb shell settings put secure enabled_accessibility_services $service")
         add(stringResource(R.string.adb_enable_accessibility) to "adb shell settings put secure accessibility_enabled 1")
         if (stockLauncher != null) {
