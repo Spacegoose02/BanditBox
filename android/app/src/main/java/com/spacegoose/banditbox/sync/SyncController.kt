@@ -99,7 +99,8 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
         val start = states.load()
         if (!start.signedIn) return@withLock
         val last = clock.last()
-        if (start.hlc == null || last > start.hlc) states.save(start.copy(hlc = last))
+        val saved = start.hlc
+        if (saved == null || last > saved) states.save(start.copy(hlc = last))
         when (val r = engine.sync()) {
             is SyncEngine.Result.Synced -> {
                 _status.update { statusOf(states.load()).copy(lastSynced = Instant.now()) }
