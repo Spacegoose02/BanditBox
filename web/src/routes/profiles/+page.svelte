@@ -51,11 +51,12 @@
 		<tbody>
 			{#each profiles as p (p.id)}
 				<tr>
-					<td>{p.name}</td>
+					<td><a href="/profiles/edit?id={encodeURIComponent(p.id)}">{p.name}</a></td>
 					<td class="muted code small">{p.id}</td>
 					<td class="muted">{p.version}</td>
 					<td class="muted">{ago(p.updated)}</td>
-					<td>
+					<td class="row">
+						<a class="button" href="/profiles/edit?id={encodeURIComponent(p.id)}">Edit</a>
 						<button class="danger" disabled={profiles.length < 2} onclick={() => remove(p)}
 							>Delete</button
 						>
@@ -64,7 +65,6 @@
 			{/each}
 		</tbody>
 	</table>
-	<p class="muted small">The layout editor for each profile is coming next.</p>
 </section>
 
 <form class="panel" onsubmit={create}>

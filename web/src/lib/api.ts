@@ -1,5 +1,7 @@
 // Thin client for the server API (docs/api.md). Same origin, cookie session.
 
+import type { KnownApp } from './layout';
+
 export interface Admin {
 	id: number;
 	username: string;
@@ -100,7 +102,8 @@ export const api = {
 	devices: () => request<Device[]>('GET', '/devices'),
 	updateDevice: (id: string, patch: { name?: string; profiles?: string[] }) =>
 		request<Device>('PATCH', `/devices/${encodeURIComponent(id)}`, patch),
-	revokeDevice: (id: string) => request<void>('DELETE', `/devices/${encodeURIComponent(id)}`)
+	revokeDevice: (id: string) => request<void>('DELETE', `/devices/${encodeURIComponent(id)}`),
+	apps: () => request<KnownApp[]>('GET', '/apps')
 };
 
 /** "3 minutes ago" style text for a timestamp. */
