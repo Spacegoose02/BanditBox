@@ -75,8 +75,13 @@ jobs:
         run: |
           prerelease=""
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then prerelease="--prerelease"; fi
-          gh release create "$GITHUB_REF_NAME" "$APK" "$APK.sha256" \
-            --title "BanditBox ${GITHUB_REF_NAME#v}" --generate-notes $prerelease
+          # A release made by hand on GitHub (which pushes the tag) just gets the APK attached.
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$APK" "$APK.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$APK" "$APK.sha256" \
+              --title "BanditBox ${GITHUB_REF_NAME#v}" --generate-notes $prerelease
+          fi
 
       - name: Remove the signing key
         if: always()
