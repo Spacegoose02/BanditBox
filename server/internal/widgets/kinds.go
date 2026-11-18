@@ -52,7 +52,7 @@ const SecretKey = "key"
 
 // Kinds lists the connector kinds, in the order the web UI shows them.
 func Kinds() []Kind {
-	return []Kind{weatherScout, statScraps, bingeBandit, jsonFeed}
+	return []Kind{weatherScout, statScraps, bingeBandit, immich, plexPhotos, jsonFeed}
 }
 
 // KindByID returns a kind, or false.

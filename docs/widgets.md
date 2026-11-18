@@ -16,7 +16,11 @@ The BanditBox server fetches web services on a schedule and hands the feeds to e
 | Weather Scout | `weatherscout.now` (weather) | `GET /api/connect/summary` | An app key (`wsk_…`) from Weather Scout's Family & settings, Connected apps |
 | StatScraps | `statscraps.scores` (scoreboard) | `GET /api/ha/scorecards?items=cfb:259,nhl:7,nascar` | None |
 | BingeBandit | `bingebandit.continue-watching`, `bingebandit.recent` (card rows) | `GET /api/rows?key=continue` and `key=recent` | An API key (`bb_…`) from BingeBandit's Account, API keys. The rows show that account's titles, so they are hidden on kids profiles |
+| Immich photos | `immich.photos` (card row of photos) | An album (`GET /api/albums/{id}`) or random photos (`POST /api/search/random`), 30 at a time, new ones every hour | An API key from Immich's Account settings, sent as `x-api-key` |
+| Plex photos | `plexphotos.photos` (card row of photos) | Every photo in a photo library (`GET /library/sections/{n}/all?type=13`), scaled to 1920×1080 by Plex | Your Plex token, sent as `X-Plex-Token` |
 | Widget feed (JSON) | `<id>.<feed>` for each feed it serves | Any address serving widget feed JSON: one feed, or `{"feeds": [...]}` | Optional Bearer key |
+
+Photo feeds are made for **ambient mode**: on the TV, Settings → Theme → Screensaver → Photos shows them full screen, one every 20 seconds, with the time and where and when each was taken. They also work as a widget row. They are hidden on kids profiles unless the connector's "Show on kids profiles" says yes.
 
 On the TV, feeds are cached on disk, so widget rows draw at once after a restart and while the server is down. The TV fetches them after each sync and whenever the server announces a change while the launcher is in front. Widget rows whose feed has no cards (or that the server doesn't have) are skipped, like empty app rows. On a kids profile only `kidsSafe` feeds show, and only cards for approved apps. Selecting a card opens its `link` in the feed's app, or the app itself; long-press shows the card's `actions`.
 

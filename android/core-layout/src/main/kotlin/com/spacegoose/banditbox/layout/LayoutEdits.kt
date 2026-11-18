@@ -279,8 +279,17 @@ object LayoutEdits {
     fun setIconPack(doc: LayoutDocument, pack: IconPackRef): LayoutDocument =
         doc.editTheme { it.copy(iconPack = if (pack == IconPackRef.System) null else pack.id) }
 
-    fun setScreensaver(doc: LayoutDocument, type: ScreensaverType, timeoutMin: Int? = doc.theme?.screensaver?.timeoutMin): LayoutDocument =
-        doc.editTheme { it.copy(screensaver = Screensaver(type.id, timeoutMin?.coerceIn(1, 120))) }
+    /** [feed] is kept only for [ScreensaverType.PHOTOS]. */
+    fun setScreensaver(
+        doc: LayoutDocument,
+        type: ScreensaverType,
+        timeoutMin: Int? = doc.theme?.screensaver?.timeoutMin,
+        feed: String? = doc.theme?.screensaver?.feed,
+    ): LayoutDocument =
+        doc.editTheme {
+            val keptFeed = feed?.takeIf { type == ScreensaverType.PHOTOS && WidgetFeeds.isFeedId(it) }
+            it.copy(screensaver = Screensaver(type.id, timeoutMin?.coerceIn(1, 120), keptFeed))
+        }
 
     // ---- Helpers ----
 

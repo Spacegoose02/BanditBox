@@ -90,9 +90,9 @@ data class ThemeColors(
     val text: String? = null,
 )
 
-/** [type] is "none", "system", "oled-drift", "oled-starfield" or "oled-black". */
+/** [type] is "none", "system", "oled-drift", "oled-starfield", "oled-black" or "photos" (with [feed]). */
 @Serializable
-data class Screensaver(val type: String, val timeoutMin: Int? = null)
+data class Screensaver(val type: String, val timeoutMin: Int? = null, val feed: String? = null)
 
 @Serializable
 sealed interface Row {

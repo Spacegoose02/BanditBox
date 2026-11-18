@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -59,16 +60,41 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("HTTP %d", e.Status)
 }
 
+// bearer is the header that sends key as a Bearer token, or nil for no key.
+func bearer(key string) http.Header {
+	if key == "" {
+		return nil
+	}
+	return http.Header{"Authorization": {"Bearer " + key}}
+}
+
 // GetJSON fetches u and decodes the JSON reply into out. A non-empty key is sent as a Bearer token.
 func (f *Fetcher) GetJSON(ctx context.Context, u, key string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	return f.DoJSON(ctx, http.MethodGet, u, bearer(key), nil, out)
+}
+
+// DoJSON sends a request with the headers in hdr (and body as JSON, when not nil) and
+// decodes the JSON reply into out.
+func (f *Fetcher) DoJSON(ctx context.Context, method, u string, hdr http.Header, body, out any) error {
+	var rd io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		rd = bytes.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, rd)
 	if err != nil {
 		return err
 	}
+	for k, v := range hdr {
+		req.Header[k] = v
+	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "BanditBox")
-	if key != "" {
-		req.Header.Set("Authorization", "Bearer "+key)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 	res, err := f.Client.Do(req)
 	if err != nil {
@@ -100,6 +126,11 @@ func cleanNetError(err error) error {
 // Image copies the picture at u to the server, sending key when it is set, and
 // returns its media:sha256-<hex> reference, or "" if it can't be fetched.
 func (f *Fetcher) Image(ctx context.Context, u, key string) string {
+	return f.ImageWith(ctx, u, bearer(key))
+}
+
+// ImageWith is Image with any headers, for sources that don't use Bearer tokens.
+func (f *Fetcher) ImageWith(ctx context.Context, u string, hdr http.Header) string {
 	if f.MediaDir == "" || u == "" {
 		return ""
 	}
@@ -112,7 +143,7 @@ func (f *Fetcher) Image(ctx context.Context, u, key string) string {
 			return MediaPrefix + sha
 		}
 	}
-	sha, err := f.download(ctx, u, key)
+	sha, err := f.download(ctx, u, hdr)
 	if err != nil {
 		return ""
 	}
@@ -125,15 +156,15 @@ func (f *Fetcher) Image(ctx context.Context, u, key string) string {
 	return MediaPrefix + sha
 }
 
-func (f *Fetcher) download(ctx context.Context, u, key string) (string, error) {
+func (f *Fetcher) download(ctx context.Context, u string, hdr http.Header) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "BanditBox")
-	if key != "" {
-		req.Header.Set("Authorization", "Bearer "+key)
+	for k, v := range hdr {
+		req.Header[k] = v
 	}
+	req.Header.Set("User-Agent", "BanditBox")
 	res, err := f.Client.Do(req)
 	if err != nil {
 		return "", err

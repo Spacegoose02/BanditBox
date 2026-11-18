@@ -32,6 +32,7 @@ sealed interface ThemePage {
     data object Icons : ThemePage
     data object Screensaver : ThemePage
     data object ScreensaverTimeout : ThemePage
+    data object ScreensaverFeed : ThemePage
 }
 
 /** What the theme dialogs need from the launcher: adding pictures needs the activity. */
@@ -173,9 +174,21 @@ fun ThemeDialog(page: ThemePage, ctx: OverlayContext) {
             title = stringResource(R.string.screensaver),
             choices = buildList {
                 ScreensaverType.entries.forEach { type ->
-                    add(Choice(mark(screensaverLabel(type), resolved.screensaver.type == type)) { edit { LayoutEdits.setScreensaver(it, type) } })
+                    add(
+                        Choice(mark(screensaverLabel(type), resolved.screensaver.type == type)) {
+                            if (type == ScreensaverType.PHOTOS) {
+                                back(ThemePage.ScreensaverFeed)
+                            } else {
+                                edit { LayoutEdits.setScreensaver(it, type) }
+                            }
+                        },
+                    )
                 }
-                if (resolved.screensaver.type.isOled) {
+                if (resolved.screensaver.type == ScreensaverType.PHOTOS) {
+                    val name = ctx.photoFeeds.firstOrNull { it.id == resolved.screensaver.feed }?.name ?: resolved.screensaver.feed.orEmpty()
+                    add(Choice(stringResource(R.string.screensaver_photos_from, name)) { back(ThemePage.ScreensaverFeed) })
+                }
+                if (resolved.screensaver.type.drawnByLauncher) {
                     add(Choice(stringResource(R.string.screensaver_after, resolved.screensaver.timeoutMin)) { back(ThemePage.ScreensaverTimeout) })
                 }
             },
@@ -191,6 +204,18 @@ fun ThemeDialog(page: ThemePage, ctx: OverlayContext) {
                 }
             },
             onDismiss = { back(ThemePage.Screensaver) },
+        )
+        ThemePage.ScreensaverFeed -> ChoiceDialog(
+            title = stringResource(R.string.screensaver_photos_pick),
+            choices = ctx.photoFeeds.map { feed ->
+                val current = resolved.screensaver.type == ScreensaverType.PHOTOS && resolved.screensaver.feed == feed.id
+                Choice(mark(feed.name, current)) {
+                    edit { LayoutEdits.setScreensaver(it, ScreensaverType.PHOTOS, feed = feed.id) }
+                    back(ThemePage.Screensaver)
+                }
+            },
+            onDismiss = { back(ThemePage.Screensaver) },
+            message = stringResource(if (ctx.photoFeeds.isEmpty()) R.string.screensaver_photos_none else R.string.screensaver_photos_hint),
         )
     }
 }
@@ -235,5 +260,6 @@ private fun screensaverLabel(type: ScreensaverType): String = stringResource(
         ScreensaverType.OLED_DRIFT -> R.string.screensaver_drift
         ScreensaverType.OLED_STARFIELD -> R.string.screensaver_starfield
         ScreensaverType.OLED_BLACK -> R.string.screensaver_black
+        ScreensaverType.PHOTOS -> R.string.screensaver_photos
     },
 )

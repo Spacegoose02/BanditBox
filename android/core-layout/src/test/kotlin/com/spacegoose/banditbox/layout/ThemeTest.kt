@@ -149,6 +149,20 @@ class ThemeResolverTest {
         val saver = ThemeResolver.resolve(Theme(screensaver = Screensaver("oled-drift", 500))).screensaver
         assertEquals(ScreensaverSpec(ScreensaverType.OLED_DRIFT, 120), saver)
         assertEquals(ScreensaverType.SYSTEM, ScreensaverType.parse("hologram"))
+        val photos = ThemeResolver.resolve(Theme(screensaver = Screensaver("photos", 5, "immich.photos"))).screensaver
+        assertEquals(ScreensaverSpec(ScreensaverType.PHOTOS, 5, "immich.photos"), photos)
+        assertTrue(photos.type.drawnByLauncher && !photos.type.isOled)
+    }
+
+    @Test
+    fun screensaverEditKeepsTheFeedOnlyForPhotos() {
+        val doc = LayoutJson.decode("""{"schema":1,"profileId":"p","version":1,"profile":{"name":"A"},"rows":[]}""")
+        val photos = LayoutEdits.setScreensaver(doc, ScreensaverType.PHOTOS, feed = "immich.photos")
+        assertEquals(Screensaver("photos", null, "immich.photos"), photos.theme?.screensaver)
+        val timeout = LayoutEdits.setScreensaver(photos, ScreensaverType.PHOTOS, 20)
+        assertEquals("immich.photos", timeout.theme?.screensaver?.feed)
+        val drift = LayoutEdits.setScreensaver(timeout, ScreensaverType.OLED_DRIFT)
+        assertEquals(Screensaver("oled-drift", 20, null), drift.theme?.screensaver)
     }
 
     @Test

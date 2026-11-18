@@ -18,6 +18,7 @@ import com.spacegoose.banditbox.layout.ProfileSummary
 import com.spacegoose.banditbox.layout.Remap
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
+import com.spacegoose.banditbox.layout.WidgetFeed
 import com.spacegoose.banditbox.system.BackupSource
 import com.spacegoose.banditbox.system.SystemShortcuts
 import com.spacegoose.banditbox.system.TvInput
@@ -102,6 +103,8 @@ class OverlayContext(
     val profiles: List<ProfileSummary>,
     val launchOnBoot: String?,
     val deps: LauncherDeps,
+    /** Widget feeds with pictures the profile may see, for the photo screensaver. */
+    val photoFeeds: List<WidgetFeed>,
     val show: (Overlay?) -> Unit,
     val edit: ((LayoutDocument) -> LayoutDocument) -> Unit,
     val startMove: (rowId: String, item: String, label: String) -> Unit,
