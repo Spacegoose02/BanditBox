@@ -14,8 +14,8 @@ import (
 	"github.com/spacegoose02/banditbox/server/internal/auth"
 	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
-	"github.com/spacegoose02/banditbox/server/internal/webui"
 	"github.com/spacegoose02/banditbox/server/internal/store"
+	"github.com/spacegoose02/banditbox/server/internal/webui"
 )
 
 // maxBody caps request bodies. Layout documents are a few KB.
