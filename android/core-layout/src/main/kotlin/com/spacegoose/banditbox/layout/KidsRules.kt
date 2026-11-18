@@ -160,7 +160,7 @@ object KidsRules {
             when (val action = rule.action) {
                 is Action.OpenApp -> action.packageName in kids.approvedApps
                 is Action.OpenInput, Action.Settings, Action.LauncherSettings -> false
-                Action.Home, Action.AllApps, Action.None -> true
+                Action.Home, Action.AllApps, Action.SleepTimer, Action.None -> true
             }
         }
     }

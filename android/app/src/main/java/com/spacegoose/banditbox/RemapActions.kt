@@ -6,6 +6,7 @@ import android.content.Intent
 import android.provider.Settings
 import android.util.Log
 import com.spacegoose.banditbox.guard.GuardStatus
+import com.spacegoose.banditbox.guard.SleepTimer
 import com.spacegoose.banditbox.layout.Action
 import com.spacegoose.banditbox.system.passthroughInputs
 
@@ -17,6 +18,7 @@ object RemapActions {
     const val SHOW_SETTINGS = "settings"
 
     fun perform(context: Context, action: Action) {
+        if (action == Action.SleepTimer) return SleepTimer.step(context)
         val intent = intentFor(context, action) ?: return
         try {
             context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -39,7 +41,7 @@ object RemapActions {
         Action.AllApps -> show(context, SHOW_ALL_APPS)
         Action.LauncherSettings -> show(context, SHOW_SETTINGS)
         Action.Settings -> Intent(Settings.ACTION_SETTINGS)
-        Action.None -> null
+        Action.SleepTimer, Action.None -> null
     }
 
     private fun show(context: Context, screen: String) =

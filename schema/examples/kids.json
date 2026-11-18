@@ -32,6 +32,7 @@
   "topBar": ["clock", "weatherscout.now", "inputs", "network", "settings"],
   "remap": [
     { "key": "HOME", "press": "long", "action": { "type": "openInput", "input": "HDMI2" } },
-    { "key": "PROG_RED", "press": "short", "action": { "type": "allApps" } }
+    { "key": "PROG_RED", "press": "short", "action": { "type": "allApps" } },
+    { "key": "PROG_BLUE", "press": "long", "action": { "type": "sleepTimer" } }
   ]
 }

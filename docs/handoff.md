@@ -128,6 +128,8 @@ Package names in this example are placeholders.
 
 The same service also handles remote **key remapping** and **kids enforcement**: if a kids profile opens an app that isn't approved, the service sends the user back to the launcher.
 
+It also runs the **sleep timer** (Settings → Sleep timer, or a remote button set to "Sleep timer", where each press moves through 15, 30, 45, 60, 90 and 120 minutes, then off). When the time is up, BanditBox sends a pause key to whatever is playing and asks the service to lock the screen, which puts the TV to sleep. With the service off, BanditBox only comes to the front. The timer is kept in memory, and the top bar shows the time left.
+
 ## 8. Plugin / widget API
 
 - **Widget feed** (`schema/widget-feed.schema.json`):
