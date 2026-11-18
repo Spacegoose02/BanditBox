@@ -107,6 +107,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
                 _status.update { statusOf(states.load()).copy(lastSynced = Instant.now()) }
                 if (r.changed.isNotEmpty() || r.rejected.isNotEmpty() || r.renamed.isNotEmpty()) _results.emit(r)
                 reportApps()
+                scope.launch { installLock.withLock { installs.run(api()) } }
                 if (foreground) openStream()
             }
             is SyncEngine.Result.Offline -> {
@@ -122,6 +123,33 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
                 _status.value = Status()
             }
         }
+    }
+
+    private val installs by lazy { ApkInstaller(app) }
+    private val installLock = Mutex()
+
+    private fun api(s: SyncState = states.load()) = HttpSyncApi(s.serverUrl!!, vault.token().orEmpty(), BuildConfig.VERSION_NAME)
+
+    /** Reports an install's state to the server, in the background. */
+    fun reportInstall(sha256: String, status: String, detail: String) {
+        scope.launch {
+            val s = states.load()
+            if (!s.signedIn) return@launch
+            try {
+                api(s).reportInstall(sha256, status, detail)
+            } catch (e: IOException) {
+                Log.i("BanditBox", "Couldn't report install: ${e.message}")
+            } catch (e: ServerException) {
+                Log.i("BanditBox", "Server refused install report: ${e.message}")
+            } catch (_: RevokedException) {
+            }
+        }
+    }
+
+    /** PackageInstaller finished an install that [ApkInstaller] started. */
+    fun installFinished(sha256: String, success: Boolean, detail: String) {
+        installs.finished(sha256, success)
+        reportInstall(sha256, if (success) ApkInstaller.INSTALLED else ApkInstaller.FAILED, detail)
     }
 
     private val appIndex by lazy { AppIndex(app) }
@@ -180,6 +208,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
             onVersion = { id, version -> if ((states.load().versions[id] ?: -1) < version) requestSync() },
             onProfiles = ::requestSync,
             onClosed = { revoked -> streamClosed(generation, revoked) },
+            onInstalls = ::requestSync,
         )
     }
 
