@@ -14,6 +14,7 @@ See [docs/roadmap.md](docs/roadmap.md) and [docs/handoff.md](docs/handoff.md).
 | `web/` | SvelteKit web UI, embedded in the server (Phase 2) |
 | `deploy/` | Dockerfile, compose file, Unraid template (Phase 2) |
 | `docs/` | Roadmap, handoff, decision records |
+| `tools/` | Scripts, such as the RAM budget check |
 
 ## Building
 
@@ -27,9 +28,25 @@ cd android
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The debug build installs as `com.spacegoose.banditbox.debug` and registers as a Home app. On a Shield, press Home and pick BanditBox. On Google TV (onn 4K) the stock launcher keeps Home until the guard service lands; open BanditBox from the app list for now.
+The debug build installs as `com.spacegoose.banditbox.debug` and registers as a Home app. On a Shield, press Home and pick BanditBox. On Google TV (onn 4K) the stock launcher keeps Home: in BanditBox open Settings, then Home button, and turn on the BanditBox Home button service.
 
 Every pull request that touches `android/` builds a debug APK in CI, which you can download from the run's artifacts.
+
+#### RAM budget
+
+BanditBox must stay under 80 MB of memory (PSS) while idle on a 2 GB TV. The **RAM budget** workflow checks this on every push to `main`: it builds the minified release build, runs it on a 2 GB Android TV emulator, and fails if the median idle PSS is over budget. Its `ram-report` artifact holds the samples and the full `dumpsys meminfo`.
+
+To measure a real TV by hand (the onn 4K is the reference device):
+
+```sh
+cd android
+./gradlew :app:assembleRamcheck      # release build, signed with the debug key
+adb connect <tv-ip>
+adb install -r app/build/outputs/apk/ramcheck/app-ramcheck.apk
+../tools/ram-check.sh com.spacegoose.banditbox.ramcheck 80
+```
+
+Measure the release or ramcheck build: a debug build is much bigger and isn't representative.
 
 ### Server
 

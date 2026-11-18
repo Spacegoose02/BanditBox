@@ -27,6 +27,15 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        // The release build, signed with the debug key and installable next to it: what the
+        // RAM budget check (tools/ram-check.sh) measures. Never published.
+        create("ramcheck") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".ramcheck"
+            versionNameSuffix = "-ramcheck"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
 
     compileOptions {
