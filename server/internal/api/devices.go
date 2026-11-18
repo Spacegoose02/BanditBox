@@ -219,6 +219,7 @@ func (s *server) revokeDevice(w http.ResponseWriter, r *http.Request, a store.Ad
 		s.internal(w, r, err)
 		return
 	}
+	s.Hub.Kick(r.PathValue("id"))
 	s.Log.Info("device revoked", "device", r.PathValue("id"), "by", a.Username)
 	w.WriteHeader(http.StatusNoContent)
 }

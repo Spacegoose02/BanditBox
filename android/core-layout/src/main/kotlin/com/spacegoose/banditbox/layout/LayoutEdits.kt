@@ -179,6 +179,64 @@ object LayoutEdits {
     fun setAutoLogin(doc: LayoutDocument, on: Boolean): LayoutDocument =
         if (doc.profile.autoLogin == on) doc else doc.copy(profile = doc.profile.copy(autoLogin = on)).bumped()
 
+    // ---- Kids ----
+
+    /** Turns this profile into a kids profile with [kids], and the kids-safe theme. */
+    fun makeKids(doc: LayoutDocument, kids: Kids): LayoutDocument =
+        doc.copy(
+            profile = doc.profile.copy(kids = kids),
+            theme = (doc.theme ?: Theme()).copy(id = KIDS_THEME_ID),
+        ).bumped()
+
+    /** Back to a normal profile. Rows, theme and everything else stay as they are. */
+    fun endKids(doc: LayoutDocument): LayoutDocument =
+        if (doc.profile.kids == null) doc else doc.copy(profile = doc.profile.copy(kids = null)).bumped()
+
+    /** Lets a kids profile use [pkg], and puts it in the first apps row so it shows up at once. */
+    fun approveApp(doc: LayoutDocument, pkg: String): LayoutDocument {
+        val kids = doc.profile.kids ?: return doc
+        var next = doc
+        if (pkg !in kids.approvedApps) {
+            next = next.withKids(kids.copy(approvedApps = kids.approvedApps + pkg))
+        }
+        val firstRow = next.rows.firstOrNull { it is Row.Apps } as Row.Apps?
+        val inSomeRow = next.rows.any { it is Row.Apps && pkg in it.items } ||
+            next.folders.any { pkg in it.items }
+        next = when {
+            inSomeRow -> next
+            firstRow != null -> next.editAppsRow(firstRow.id, bump = false) { it.copy(items = it.items + pkg) }
+            else -> next.copy(rows = next.rows + Row.Apps(id = nextId("r", next.rows.map { it.id }), title = null, items = listOf(pkg)))
+        }
+        return if (next == doc) doc else next.bumped()
+    }
+
+    /** Takes [pkg] away from a kids profile. It stays in its row, hidden, so approving it again puts it back. */
+    fun unapproveApp(doc: LayoutDocument, pkg: String): LayoutDocument {
+        val kids = doc.profile.kids ?: return doc
+        if (pkg !in kids.approvedApps) return doc
+        return doc.withKids(kids.copy(approvedApps = kids.approvedApps - pkg)).bumped()
+    }
+
+    /** [minutes] null removes the limit. */
+    fun setDailyLimit(doc: LayoutDocument, minutes: Int?): LayoutDocument =
+        doc.editKids { it.copy(dailyLimitMin = minutes?.coerceIn(1, 1440)) }
+
+    /** [bedtime] null removes it. */
+    fun setBedtime(doc: LayoutDocument, bedtime: Bedtime?): LayoutDocument =
+        doc.editKids { it.copy(bedtime = bedtime) }
+
+    fun setUnlockMinutes(doc: LayoutDocument, minutes: Int): LayoutDocument =
+        doc.editKids { it.copy(unlockMin = minutes.coerceIn(5, 240)) }
+
+    fun setWarnMinutes(doc: LayoutDocument, minutes: Int): LayoutDocument =
+        doc.editKids { it.copy(warnMin = minutes.coerceIn(0, 60)) }
+
+    fun setParentPin(doc: LayoutDocument, pinHash: String?): LayoutDocument =
+        doc.editKids { it.copy(parentPin = pinHash) }
+
+    /** The theme every kids profile starts with. */
+    const val KIDS_THEME_ID = "kids"
+
     // ---- Button remapping ----
 
     /** Sets what [press] on [key] does, replacing any rule for the same key and press. */
@@ -196,9 +254,51 @@ object LayoutEdits {
         return if (kept.size == doc.remap.size) doc else doc.copy(remap = kept).bumped()
     }
 
+    // ---- Theme ----
+
+    /**
+     * Switches to a preset: its colors, accent and wallpaper. Choices that aren't part of a
+     * preset's look (adaptive accent, icon pack, screensaver, dimming) are kept.
+     */
+    fun applyPreset(doc: LayoutDocument, presetId: String): LayoutDocument =
+        doc.editTheme { it.copy(id = presetId, accent = null, colors = null, wallpaper = null) }
+
+    /** [ref] is a media or pack ref, [Theme.WALLPAPER_NONE], or null for the preset's own. */
+    fun setWallpaper(doc: LayoutDocument, ref: String?): LayoutDocument = doc.editTheme { it.copy(wallpaper = ref) }
+
+    /** [dim] from 0 to 0.9, or null for the default. */
+    fun setWallpaperDim(doc: LayoutDocument, dim: Float?): LayoutDocument =
+        doc.editTheme { it.copy(wallpaperDim = dim?.coerceIn(0f, ThemeResolver.MAX_DIM)) }
+
+    /** [accent] is "#RRGGBB", or null for the preset's. Turns off the adaptive accent. */
+    fun setAccent(doc: LayoutDocument, accent: String?): LayoutDocument =
+        doc.editTheme { it.copy(accent = accent, adaptiveAccent = false) }
+
+    fun setAdaptiveAccent(doc: LayoutDocument, on: Boolean): LayoutDocument = doc.editTheme { it.copy(adaptiveAccent = on) }
+
+    fun setIconPack(doc: LayoutDocument, pack: IconPackRef): LayoutDocument =
+        doc.editTheme { it.copy(iconPack = if (pack == IconPackRef.System) null else pack.id) }
+
+    fun setScreensaver(doc: LayoutDocument, type: ScreensaverType, timeoutMin: Int? = doc.theme?.screensaver?.timeoutMin): LayoutDocument =
+        doc.editTheme { it.copy(screensaver = Screensaver(type.id, timeoutMin?.coerceIn(1, 120))) }
+
     // ---- Helpers ----
 
+    private inline fun LayoutDocument.editTheme(change: (Theme) -> Theme): LayoutDocument {
+        val before = theme ?: Theme()
+        val after = change(before)
+        return if (after == before) this else copy(theme = after).bumped()
+    }
+
     private fun LayoutDocument.bumped() = copy(version = version + 1)
+
+    private fun LayoutDocument.withKids(kids: Kids) = copy(profile = profile.copy(kids = kids))
+
+    private inline fun LayoutDocument.editKids(change: (Kids) -> Kids): LayoutDocument {
+        val kids = profile.kids ?: return this
+        val next = change(kids)
+        return if (next == kids) this else withKids(next).bumped()
+    }
 
     private inline fun LayoutDocument.editAppsRow(
         rowId: String,

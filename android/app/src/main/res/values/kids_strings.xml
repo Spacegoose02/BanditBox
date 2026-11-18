@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kids profiles -->
+    <string name="kids_lock_bedtime">It\'s bedtime</string>
+    <string name="kids_lock_bedtime_until">The TV is back at %1$s.</string>
+    <string name="kids_lock_time_up">TV time is up for today</string>
+    <string name="kids_lock_time_up_detail">See you tomorrow!</string>
+    <string name="kids_parent_unlock">Parent unlock</string>
+    <string name="kids_parent_pin">Parent PIN</string>
+    <string name="kids_parent_pin_new">Choose a parent PIN</string>
+    <string name="kids_time_left">%1$s left</string>
+    <string name="kids_hours_minutes">%1$d h %2$d min</string>
+    <string name="kids_minutes">%1$d min</string>
+    <string name="kids_hours">%1$d h</string>
+
+    <string name="kids_add">Add kids profile</string>
+    <string name="kids_name">Kids profile name</string>
+    <string name="kids_default_name">Kids</string>
+    <string name="kids_parent_options">Parent options…</string>
+    <string name="kids_remove_app">Remove from kids apps</string>
+    <string name="kids_allow_in">Allow in %1$s</string>
+    <string name="kids_remove_from">Remove from %1$s</string>
+
+    <string name="kids_settings">Kids settings</string>
+    <string name="kids_settings_title">Kids settings: %1$s</string>
+    <string name="kids_apps">Approved apps (%1$d)</string>
+    <string name="kids_apps_title">Approved apps (select to allow or remove)</string>
+    <string name="kids_app_on">✓ %1$s</string>
+    <string name="kids_app_off">· %1$s</string>
+    <string name="kids_limit">Daily limit: %1$s</string>
+    <string name="kids_limit_title">Daily screen time</string>
+    <string name="kids_off">Off</string>
+    <string name="kids_bedtime">Bedtime: %1$s</string>
+    <string name="kids_bedtime_range">%1$s to %2$s</string>
+    <string name="kids_bedtime_start">Bedtime starts at</string>
+    <string name="kids_bedtime_end">and ends at</string>
+    <string name="kids_unlock">Parent unlock lasts: %1$s</string>
+    <string name="kids_warn">Warning before: %1$s</string>
+    <string name="kids_change_parent_pin">Change parent PIN</string>
+    <string name="kids_end">Turn off kids mode</string>
+    <string name="kids_end_confirm">Make %1$s a normal profile? It will see every app.</string>
+    <string name="kids_usage_access">Screen time needs usage access</string>
+    <string name="kids_usage_access_detail">Android only tells BanditBox how long apps were open after you allow usage access. Open the settings below and turn it on for BanditBox. If the TV has no such screen, run this from a computer with ADB:\n\nadb shell appops set %1$s GET_USAGE_STATS allow</string>
+    <string name="kids_open_usage_access">Open usage access settings</string>
+    <string name="kids_service_off">Kids rules are only checked when BanditBox is on screen</string>
+    <string name="kids_service_off_detail">Turn on the BanditBox Home button service so a kid is sent back when an app isn\'t allowed, or when time is up while an app is open.</string>
+</resources>

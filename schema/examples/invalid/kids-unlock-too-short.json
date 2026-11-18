@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "profileId": "p_kids",
+  "version": 1,
+  "profile": { "name": "Kids", "kids": { "approvedApps": ["com.spacegoose.wavelength"], "unlockMin": 1 } },
+  "rows": []
+}

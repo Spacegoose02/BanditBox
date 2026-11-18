@@ -34,6 +34,7 @@ class HomeActivity : ComponentActivity() {
     private val visuals by lazy { AppVisuals(this) }
     private var homePresses by mutableIntStateOf(0)
     private var request by mutableStateOf<ShowRequest?>(null)
+    private var kidsMode by mutableStateOf(false)
     private var requestCount = 0
     private var foreground by mutableStateOf(false)
 
@@ -59,10 +60,11 @@ class HomeActivity : ComponentActivity() {
             onAppAction = ::handle,
             onRemapsChanged = { (application as BanditBoxApplication).updateRemaps(it) },
             restart = ::recreate,
+            onKidsMode = { kidsMode = it },
         )
         if (savedInstanceState == null) request = showRequest(intent)
         setContent {
-            BanditBoxTheme {
+            BanditBoxTheme(kids = kidsMode) {
                 BanditBoxApp(deps = deps, homePresses = homePresses, request = request, foreground = foreground)
             }
         }

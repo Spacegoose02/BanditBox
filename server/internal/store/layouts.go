@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spacegoose02/banditbox/server/internal/schema"
+	"github.com/spacegoose02/banditbox/server/internal/syncdoc"
 )
 
 // historyKeep is how many earlier versions of each layout are kept.
@@ -111,26 +112,45 @@ func (s *Store) PutLayout(ctx context.Context, profileID string, baseVersion int
 
 	now := time.Now().UnixMilli()
 	if exists {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT OR REPLACE INTO layout_history (profile_id, version, doc, saved_at) VALUES (?, ?, ?, ?)`,
-			profileID, current, prevDoc, now); err != nil {
+		var prev syncdoc.Doc
+		if err := json.Unmarshal([]byte(prevDoc), &prev); err != nil {
 			return Layout{}, err
 		}
-		if _, err := tx.ExecContext(ctx,
-			`DELETE FROM layout_history WHERE profile_id = ? AND version <= ?`, profileID, current-historyKeep); err != nil {
+		if err := recordChanges(ctx, tx, profileID, next, "admin", "", "", changedPaths(prev, m)); err != nil {
 			return Layout{}, err
 		}
 	}
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO profiles (id, version, doc, updated_at) VALUES (?, ?, ?, ?)
-		 ON CONFLICT(id) DO UPDATE SET version = excluded.version, doc = excluded.doc, updated_at = excluded.updated_at`,
-		profileID, next, string(raw), now); err != nil {
+	if err := saveVersion(ctx, tx, profileID, next, raw, exists, current, prevDoc, now); err != nil {
 		return Layout{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return Layout{}, err
 	}
 	return Layout{ProfileID: profileID, Version: next, Doc: raw}, nil
+}
+
+// saveVersion writes the new document, moving the previous one into history.
+func saveVersion(ctx context.Context, tx *sql.Tx, profileID string, next int64, raw []byte, exists bool, current int64, prevDoc string, now int64) error {
+	if exists {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT OR REPLACE INTO layout_history (profile_id, version, doc, saved_at) VALUES (?, ?, ?, ?)`,
+			profileID, current, prevDoc, now); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM layout_history WHERE profile_id = ? AND version <= ?`, profileID, current-historyKeep); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM layout_changes WHERE profile_id = ? AND version <= ?`, profileID, next-changesKeep); err != nil {
+			return err
+		}
+	}
+	_, err := tx.ExecContext(ctx,
+		`INSERT INTO profiles (id, version, doc, updated_at) VALUES (?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET version = excluded.version, doc = excluded.doc, updated_at = excluded.updated_at`,
+		profileID, next, string(raw), now)
+	return err
 }
 
 // DeleteProfile removes a profile and its history.
@@ -147,8 +167,14 @@ func (s *Store) DeleteProfile(ctx context.Context, profileID string) error {
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM layout_history WHERE profile_id = ?`, profileID); err != nil {
-		return err
+	for _, q := range []string{
+		`DELETE FROM layout_history WHERE profile_id = ?`,
+		`DELETE FROM layout_changes WHERE profile_id = ?`,
+		`DELETE FROM applied_ops WHERE profile_id = ?`,
+	} {
+		if _, err := tx.ExecContext(ctx, q, profileID); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

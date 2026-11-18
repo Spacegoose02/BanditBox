@@ -46,6 +46,8 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
+Or on GitHub: **Releases → Draft a new release**, type `v0.1.0` as a new tag on `main`, and publish. The workflow attaches the signed APK to that release once the RAM check passes.
+
 Watch it under **Actions → Release**. When it finishes, the APK is on the **Releases** page. Install it on a TV with `adb install -r banditbox-0.1.0.apk`, or with a downloader app pointed at the release asset's URL.
 
 The release build installs as `com.spacegoose.banditbox`, next to any debug (`.debug`) or measuring (`.ramcheck`) builds, so its settings and profiles start fresh. Use Settings → Backup and restore to carry profiles over.

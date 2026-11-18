@@ -34,8 +34,8 @@ sealed interface Overlay {
     /** Ask for an existing PIN; [onSuccess] runs only when it matches [pinHash]. */
     class PinEntry(val title: String, val pinHash: String, val onSuccess: () -> Unit) : Overlay
 
-    /** Ask for a new PIN twice; [onDone] gets the PIN's hash. */
-    class NewPin(val onDone: (String) -> Unit) : Overlay
+    /** Ask for a new PIN twice; [onDone] gets the PIN's hash. [title] replaces "New 4-digit PIN". */
+    class NewPin(val title: String? = null, val onDone: (String) -> Unit) : Overlay
     data object Settings : Overlay
     data object ProfileSettings : Overlay
     data object Inputs : Overlay
@@ -52,6 +52,18 @@ sealed interface Overlay {
     data class PickInput(val key: String, val press: Press) : Overlay
 
     data object Backup : Overlay
+
+    // Kids profiles. Everything past KidsAppParent is reached only through the parent PIN.
+    data class KidsAppParent(val app: AppEntry) : Overlay
+    data object KidsSettings : Overlay
+    data object KidsApps : Overlay
+    data object KidsLimit : Overlay
+    data object KidsBedtimeStart : Overlay
+    data class KidsBedtimeEnd(val start: String) : Overlay
+    data object KidsUnlock : Overlay
+    data object KidsWarn : Overlay
+    data object KidsUsageAccess : Overlay
+    data object KidsServiceOff : Overlay
     class PickBackup(val sources: List<BackupSource>) : Overlay
     class Message(val title: String, val message: String) : Overlay
 
@@ -94,7 +106,10 @@ class OverlayContext(
     val setLaunchOnBoot: (String?) -> Unit,
     val profile: ProfileActions,
     val backup: BackupActions,
-)
+    val kids: KidsActions,
+) {
+    val isKids: Boolean get() = doc.profile.kids != null
+}
 
 @Composable
 fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
@@ -135,7 +150,7 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
             },
             onDismiss = close,
         )
-        is Overlay.NewPin -> NewPinDialog(onDone = { hash -> close(); overlay.onDone(hash) }, onDismiss = close)
+        is Overlay.NewPin -> NewPinDialog(title = overlay.title, onDone = { hash -> close(); overlay.onDone(hash) }, onDismiss = close)
         Overlay.Settings -> SettingsDialog(ctx)
         Overlay.ProfileSettings -> ProfileSettingsDialog(ctx)
         Overlay.Inputs -> ChoiceDialog(
@@ -154,6 +169,16 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
         is Overlay.PickInput -> PickInputDialog(overlay.key, overlay.press, ctx)
         Overlay.Backup -> BackupDialog(ctx)
         is Overlay.PickBackup -> PickBackupDialog(overlay.sources, ctx)
+        is Overlay.KidsAppParent -> KidsAppParentDialog(overlay.app, ctx)
+        Overlay.KidsSettings -> KidsSettingsDialog(ctx)
+        Overlay.KidsApps -> KidsAppsDialog(ctx)
+        Overlay.KidsLimit -> KidsLimitDialog(ctx)
+        Overlay.KidsBedtimeStart -> KidsBedtimeStartDialog(ctx)
+        is Overlay.KidsBedtimeEnd -> KidsBedtimeEndDialog(overlay.start, ctx)
+        Overlay.KidsUnlock -> KidsUnlockDialog(ctx)
+        Overlay.KidsWarn -> KidsWarnDialog(ctx)
+        Overlay.KidsUsageAccess -> KidsUsageAccessDialog(ctx)
+        Overlay.KidsServiceOff -> KidsServiceOffDialog(ctx)
         is Overlay.Message -> ChoiceDialog(
             title = overlay.title,
             choices = listOf(Choice(stringResource(R.string.ok)) { close() }),
@@ -165,6 +190,7 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
 
 @Composable
 private fun AppMenuDialog(o: Overlay.AppMenu, ctx: OverlayContext) {
+    if (ctx.isKids) return KidsAppMenuDialog(o.app, ctx)
     val app = o.app
     val pkg = app.packageName
     val close = { ctx.show(null) }
@@ -178,6 +204,12 @@ private fun AppMenuDialog(o: Overlay.AppMenu, ctx: OverlayContext) {
     val isBootApp = ctx.launchOnBoot == pkg
     val bootLabel = stringResource(if (isBootApp) R.string.launch_on_boot_off else R.string.launch_on_boot_on)
     val system = menuFor(app).filter { it != AppMenuAction.OPEN }.map { it to stringResource(it.labelRes()) }
+    // From a parent's profile, any app can be approved for a kids profile in one step.
+    val kidsToggles = ctx.profiles.filter { it.isKids }.map { kidsProfile ->
+        val on = pkg in kidsProfile.kidsApps.orEmpty()
+        val label = stringResource(if (on) R.string.kids_remove_from else R.string.kids_allow_in, kidsProfile.name)
+        Choice(label) { close(); ctx.kids.setApproval(kidsProfile.id, pkg, !on) }
+    }
 
     val choices = buildList {
         add(Choice(open) { close(); ctx.deps.onAppAction(app, AppMenuAction.OPEN) })
@@ -197,6 +229,7 @@ private fun AppMenuDialog(o: Overlay.AppMenu, ctx: OverlayContext) {
             }
         }
         add(Choice(hide) { close(); ctx.edit { LayoutEdits.hide(it, pkg) } })
+        addAll(kidsToggles)
         add(Choice(bootLabel) { close(); ctx.setLaunchOnBoot(if (isBootApp) null else pkg) })
         system.forEach { (action, label) -> add(Choice(label) { close(); ctx.deps.onAppAction(app, action) }) }
     }
@@ -274,7 +307,8 @@ private fun SettingsDialog(ctx: OverlayContext) {
     val close = { ctx.show(null) }
     ChoiceDialog(
         title = stringResource(R.string.settings),
-        choices = listOf(
+        choices = listOfNotNull(
+            if (ctx.isKids) Choice(stringResource(R.string.kids_settings)) { ctx.show(Overlay.KidsSettings) } else null,
             Choice(stringResource(R.string.profile_settings, ctx.doc.profile.name)) { ctx.show(Overlay.ProfileSettings) },
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
@@ -299,6 +333,9 @@ private fun ProfileSettingsDialog(ctx: OverlayContext) {
     val deleteLabel = stringResource(R.string.delete_profile)
     val deleteTitle = stringResource(R.string.delete_profile_confirm, profile.name)
     val newProfileTitle = stringResource(R.string.new_profile_name)
+    val kidsNameTitle = stringResource(R.string.kids_name)
+    val kidsDefaultName = stringResource(R.string.kids_default_name)
+    val parentPinTitle = stringResource(R.string.kids_parent_pin_new)
     val setNewPin = { ctx.show(Overlay.NewPin { hash -> ctx.edit { LayoutEdits.setPin(it, hash) } }) }
 
     val choices = buildList {
@@ -324,6 +361,27 @@ private fun ProfileSettingsDialog(ctx: OverlayContext) {
             },
         )
         add(Choice(stringResource(R.string.add_profile)) { ctx.show(Overlay.TextInput(newProfileTitle, "") { ctx.profile.add(it) }) })
+        if (!ctx.isKids) {
+            // The parent PIN is this profile's PIN. Without one, the parent picks it now and it locks this profile too,
+            // so a kid can't simply switch over to it.
+            val askName = { parentPin: String ->
+                ctx.show(Overlay.TextInput(kidsNameTitle, kidsDefaultName) { name -> ctx.kids.add(name, parentPin) })
+            }
+            add(
+                Choice(stringResource(R.string.kids_add)) {
+                    if (pin != null) {
+                        askName(pin)
+                    } else {
+                        ctx.show(
+                            Overlay.NewPin(parentPinTitle) { hash ->
+                                ctx.edit { LayoutEdits.setPin(it, hash) }
+                                askName(hash)
+                            },
+                        )
+                    }
+                },
+            )
+        }
         if (ctx.profiles.size > 1) {
             add(Choice(deleteLabel) { ctx.show(Overlay.Confirm(deleteTitle, deleteLabel) { ctx.profile.deleteCurrent() }) })
         }
@@ -333,9 +391,9 @@ private fun ProfileSettingsDialog(ctx: OverlayContext) {
 
 /** New PIN, then the same PIN again. A mismatch starts over. */
 @Composable
-private fun NewPinDialog(onDone: (String) -> Unit, onDismiss: () -> Unit) {
+private fun NewPinDialog(title: String?, onDone: (String) -> Unit, onDismiss: () -> Unit) {
     var first by remember { mutableStateOf<String?>(null) }
-    val enterTitle = stringResource(R.string.pin_new)
+    val enterTitle = title ?: stringResource(R.string.pin_new)
     val confirmTitle = stringResource(R.string.pin_confirm)
     PinDialog(
         title = if (first == null) enterTitle else confirmTitle,

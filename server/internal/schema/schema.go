@@ -5,67 +5,69 @@
 package schema
 
 //go:generate cp ../../../schema/layout.schema.json layout.schema.json
+//go:generate cp ../../../schema/op.schema.json op.schema.json
 
 import (
 	"bytes"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-//go:embed layout.schema.json
-var layoutSchema []byte
-
-const layoutURL = "https://banditbox.dev/schema/layout.schema.json"
-
 var (
-	compileOnce sync.Once
-	layout      *jsonschema.Schema
-	compileErr  error
+	//go:embed layout.schema.json
+	layoutSchema []byte
+	//go:embed op.schema.json
+	opSchema []byte
 )
 
-func compiled() (*jsonschema.Schema, error) {
-	compileOnce.Do(func() {
-		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(layoutSchema))
-		if err != nil {
-			compileErr = err
-			return
-		}
-		c := jsonschema.NewCompiler()
-		if err := c.AddResource(layoutURL, doc); err != nil {
-			compileErr = err
-			return
-		}
-		layout, compileErr = c.Compile(layoutURL)
-	})
-	return layout, compileErr
+type compiled struct {
+	url  string
+	src  []byte
+	once sync.Once
+	s    *jsonschema.Schema
+	err  error
 }
 
-// ValidateLayout reports whether raw is a valid layout document.
-// The error message says which part is wrong.
-func ValidateLayout(raw []byte) error {
-	s, err := compiled()
+var (
+	layout = &compiled{url: "https://banditbox.dev/schema/layout.schema.json", src: layoutSchema}
+	op     = &compiled{url: "https://banditbox.dev/schema/op.schema.json", src: opSchema}
+)
+
+func (c *compiled) get() (*jsonschema.Schema, error) {
+	c.once.Do(func() {
+		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(c.src))
+		if err != nil {
+			c.err = err
+			return
+		}
+		comp := jsonschema.NewCompiler()
+		if err := comp.AddResource(c.url, doc); err != nil {
+			c.err = err
+			return
+		}
+		c.s, c.err = comp.Compile(c.url)
+	})
+	return c.s, c.err
+}
+
+func (c *compiled) validate(raw []byte) error {
+	s, err := c.get()
 	if err != nil {
-		return fmt.Errorf("layout schema: %w", err)
+		return fmt.Errorf("schema %s: %w", c.url, err)
 	}
 	inst, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("not JSON: %w", err)
 	}
-	if err := s.Validate(inst); err != nil {
-		return err
-	}
-	return nil
+	return s.Validate(inst)
 }
 
-// ValidateLayoutValue validates an already decoded document (for example a map from json.Unmarshal).
-func ValidateLayoutValue(v any) error {
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return ValidateLayout(raw)
-}
+// ValidateLayout reports whether raw is a valid layout document.
+// The error message says which part is wrong.
+func ValidateLayout(raw []byte) error { return layout.validate(raw) }
+
+// ValidateOp reports whether raw is a valid sync op.
+func ValidateOp(raw []byte) error { return op.validate(raw) }

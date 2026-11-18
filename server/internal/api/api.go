@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/spacegoose02/banditbox/server/internal/auth"
+	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
 )
@@ -31,6 +32,7 @@ type Deps struct {
 	Store   *store.Store
 	Auth    *auth.Auth
 	Pairing *pairing.Manager
+	Hub     *hub.Hub
 	Log     *slog.Logger
 }
 
@@ -42,6 +44,9 @@ type server struct {
 func NewHandler(d Deps) http.Handler {
 	if d.Log == nil {
 		d.Log = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	if d.Hub == nil {
+		d.Hub = hub.New()
 	}
 	s := &server{d}
 	mux := http.NewServeMux()
@@ -71,6 +76,9 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("DELETE /api/v1/devices/{id}", s.admin(s.revokeDevice))
 
 	mux.HandleFunc("GET /api/v1/device/me", s.device(s.deviceMe))
+	mux.HandleFunc("GET /api/v1/sync/layout", s.device(s.syncLayout))
+	mux.HandleFunc("POST /api/v1/sync/ops", s.device(s.syncOps))
+	mux.HandleFunc("GET /api/v1/sync/stream", s.device(s.syncStream))
 
 	return sameOrigin(mux)
 }

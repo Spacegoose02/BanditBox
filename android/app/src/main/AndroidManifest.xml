@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- A TV launcher: no touchscreen needed, Leanback required. -->
     <uses-feature
@@ -14,6 +15,14 @@
 
     <!-- Posters on Continue watching and channel rows are often https links. -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Kids screen-time limit: reads how long apps were open. Granted by the user in Usage access
+        settings, or by ADB: adb shell appops set com.spacegoose.banditbox GET_USAGE_STATS allow
+    -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- To offer the system file picker for backups only on TVs that have one. -->
     <queries>

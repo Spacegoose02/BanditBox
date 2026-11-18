@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import com.spacegoose.banditbox.BanditBoxApplication
 import com.spacegoose.banditbox.BuildConfig
 import com.spacegoose.banditbox.DeviceSettings
 import com.spacegoose.banditbox.R
@@ -44,6 +45,11 @@ import com.spacegoose.banditbox.content.ContentSelect
 import com.spacegoose.banditbox.content.ProgramLaunch
 import com.spacegoose.banditbox.content.TvProviderReader
 import com.spacegoose.banditbox.content.TvSnapshot
+import com.spacegoose.banditbox.guard.Guard
+import com.spacegoose.banditbox.guard.GuardStatus
+import com.spacegoose.banditbox.layout.Kids
+import com.spacegoose.banditbox.layout.KidsRules
+import com.spacegoose.banditbox.layout.KidsStatus
 import com.spacegoose.banditbox.layout.Backup
 import com.spacegoose.banditbox.layout.HomeRow
 import com.spacegoose.banditbox.layout.BackupFile
@@ -67,6 +73,10 @@ import com.spacegoose.banditbox.system.BackupSource
 import com.spacegoose.banditbox.system.SystemShortcuts
 import com.spacegoose.banditbox.system.TvInput
 import com.spacegoose.banditbox.system.passthroughInputs
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
@@ -77,6 +87,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.Instant
+import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 
 /** What the launcher needs from the activity. */
@@ -96,6 +107,8 @@ class LauncherDeps(
     val onRemapsChanged: (List<Remap>) -> Unit,
     /** Starts the launcher over, reading every profile from disk again (after a restore). */
     val restart: () -> Unit,
+    /** A kids profile opened (true) or closed: the activity switches to the kids-safe theme. */
+    val onKidsMode: (Boolean) -> Unit = {},
 )
 
 /** A remote button shortcut asked for a screen. [id] tells two requests for the same screen apart. */
@@ -133,6 +146,12 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     var openFolderId by remember { mutableStateOf<String?>(null) }
     var moving by remember { mutableStateOf<Moving?>(null) }
     var launchOnBoot by remember { mutableStateOf(deps.settings.launchOnBoot) }
+
+    val kidsDevice = remember { (context.applicationContext as BanditBoxApplication).kidsDevice }
+    /** Where the open kids profile stands (time left, lock); null on a normal profile. */
+    var kidsStatus by remember { mutableStateOf<KidsStatus?>(null) }
+    /** Goes up to re-check the kids rules at once, for example after a parent unlock. */
+    var kidsTick by remember { mutableIntStateOf(0) }
 
     suspend fun refreshProfiles() {
         profiles = withContext(Dispatchers.IO) { storeLock.withLock { Profiles.summaries(deps.store) } }
@@ -176,6 +195,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     }
     // Every edit is written to disk in order; a burst of edits (holding ◀ in move mode) writes only the latest.
     LaunchedEffect(Unit) {
+        var savedKids: Kids? = null
         snapshotFlow { doc }.filterNotNull().drop(1).conflate().collect { latest ->
             withContext(Dispatchers.IO) {
                 storeLock.withLock {
@@ -187,22 +207,62 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                     }
                 }
             }
+            // The service reads kids rules from disk, so tell it only once they are saved.
+            if (latest.profile.kids != savedKids) {
+                savedKids = latest.profile.kids
+                Guard.kidsChanged()
+            }
         }
     }
     LaunchedEffect(Unit) { inputs = withContext(Dispatchers.IO) { passthroughInputs(context) } }
 
     val edit: ((LayoutDocument) -> LayoutDocument) -> Unit = { change -> doc?.let { doc = change(it) } }
 
+    /** On a kids profile, runs [then] only after the parent PIN. Otherwise runs it straight away. */
+    fun parentGate(then: () -> Unit) {
+        val pin = doc?.profile?.kids?.parentPin
+        if (pin == null) {
+            then()
+        } else {
+            overlay = Overlay.PinEntry(context.getString(R.string.kids_parent_pin), pin, then)
+        }
+    }
+
     /** Opening a profile other than the current one asks for its PIN, if it has one. */
     fun pick(profile: ProfileSummary) {
         val hash = profile.pinHash
         val alreadyOpen = profile.id == profileId && screen != Screen.PICK_PROFILE
-        if (hash == null || alreadyOpen) {
+        // Leaving a kids profile already took the parent PIN; don't ask for the same one twice.
+        val parentPin = doc?.takeIf { it.profileId == profileId }?.profile?.kids?.parentPin
+        if (hash == null || alreadyOpen || hash == parentPin) {
             open(profile.id)
         } else {
             overlay = Overlay.PinEntry(context.getString(R.string.pin_enter, profile.name), hash) { open(profile.id) }
         }
     }
+
+    val kidsActions = KidsActions(
+        parentGate = ::parentGate,
+        add = { name, parentPin ->
+            scope.launch {
+                val created = withContext(Dispatchers.IO) {
+                    val installed = deps.index.load().map { it.packageName to it.label }
+                    storeLock.withLock { Profiles.createKids(deps.store, name, KidsRules.defaultApproved(installed), parentPin) }
+                }
+                refreshProfiles()
+                open(created.profileId)
+            }
+        },
+        setApproval = { kidsId, pkg, approved ->
+            scope.launch {
+                withContext(Dispatchers.IO) { storeLock.withLock { Profiles.setKidsApproval(deps.store, kidsId, pkg, approved) } }
+                refreshProfiles()
+            }
+        },
+        hasUsageAccess = { kidsDevice.hasUsageAccess() },
+        openUsageAccess = { deps.launch(listOf(kidsDevice.usageAccessIntent())) },
+        serviceOn = { GuardStatus.isServiceEnabled(context) },
+    )
 
     val profileActions = ProfileActions(
         showPicker = { screen = Screen.PICK_PROFILE },
@@ -404,13 +464,56 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             RemapActions.SHOW_ALL_APPS -> screen = Screen.ALL_APPS
             RemapActions.SHOW_SETTINGS -> {
                 screen = Screen.HOME
-                overlay = Overlay.Settings
+                parentGate { overlay = Overlay.Settings }
             }
         }
     }
-    // The BanditBox service follows the open profile's button rules.
-    val remaps = doc?.remap
+    // The BanditBox service follows the open profile's button rules (on a kids profile, only the safe ones).
+    val remaps = doc?.let(KidsRules::allowedRemaps)
     LaunchedEffect(remaps) { remaps?.let(deps.onRemapsChanged) }
+
+    // Kids screen time counts while a kids profile is the open one, and stops when another opens.
+    val openDoc = doc?.takeIf { it.profileId == profileId }
+    val kidsSession = openDoc?.let { it.profileId to (it.profile.kids != null) }
+    LaunchedEffect(kidsSession) {
+        val (id, isKids) = kidsSession ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            if (isKids) kidsDevice.startSession(id)
+            kidsDevice.endSessionsExcept(if (isKids) id else null)
+        }
+        Guard.kidsChanged()
+    }
+    // Re-check the kids rules while the launcher is on screen: the clock moves, and so does bedtime.
+    val kidsRules = openDoc?.profile?.kids
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(profileId, kidsRules, kidsTick) {
+        val id = profileId
+        val kids = kidsRules
+        if (id == null || kids == null) {
+            kidsStatus = null
+            return@LaunchedEffect
+        }
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                val now = System.currentTimeMillis()
+                val used = withContext(Dispatchers.IO) { kidsDevice.usedTodayMs(id, now) }
+                kidsStatus = KidsRules.evaluate(kids, now, ZoneId.systemDefault(), used, kidsDevice.unlockedUntil(id))
+                delay(KIDS_REFRESH_MS)
+            }
+        }
+    }
+    val isKidsProfile = kidsRules != null
+    LaunchedEffect(isKidsProfile) { deps.onKidsMode(isKidsProfile) }
+    val kidsLock = kidsStatus?.lock.takeIf { kidsRules != null }
+    // A lock closes whatever was open, except the PIN pad that lifts it.
+    LaunchedEffect(kidsLock) {
+        if (kidsLock != null) {
+            if (overlay !is Overlay.PinEntry) overlay = null
+            openFolderId = null
+            moving = null
+            if (screen != Screen.PICK_PROFILE) screen = Screen.HOME
+        }
+    }
 
     BackHandler(enabled = screen != Screen.HOME && profileId != null) { screen = Screen.HOME }
     BackHandler(enabled = moving != null) { moving = null }
@@ -511,7 +614,10 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             onOpen = { deps.onAppAction(it, AppMenuAction.OPEN) },
             onAppMenu = { app, place -> overlay = Overlay.AppMenu(app, place) },
             onFolderOpen = { openFolderId = it.id },
-            onFolderMenu = { folder, rowId -> overlay = Overlay.FolderMenu(folder, rowId) },
+            onFolderMenu = { folder, rowId ->
+                // A kids profile can open folders but not change them.
+                if (doc?.profile?.kids != null) openFolderId = folder.id else overlay = Overlay.FolderMenu(folder, rowId)
+            },
         )
     }
     val topBarActions = remember(deps) {
@@ -519,8 +625,8 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             onAllApps = { screen = Screen.ALL_APPS },
             onInputs = { overlay = Overlay.Inputs },
             onNetwork = { deps.launch(SystemShortcuts.network) },
-            onSettings = { overlay = Overlay.Settings },
-            onProfile = { screen = Screen.PICK_PROFILE },
+            onSettings = { parentGate { overlay = Overlay.Settings } },
+            onProfile = { parentGate { screen = Screen.PICK_PROFILE } },
         )
     }
 
@@ -552,12 +658,28 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     }
 
     Surface(modifier = Modifier.fillMaxSize().onPreviewKeyEvent(::handleKey)) {
+        val lock = kidsLock
         if (screen == Screen.PICK_PROFILE) {
             ProfilePickerScreen(
                 profiles = profilesView,
                 currentId = profileId ?: deps.settings.currentProfileId,
                 onPick = ::pick,
                 onAdd = { overlay = Overlay.TextInput(context.getString(R.string.new_profile_name), "") { profileActions.add(it) } },
+            )
+        } else if (currentDoc != null && lock != null) {
+            KidsLockScreen(
+                lock = lock,
+                endsAtMs = kidsStatus?.lockEndsAtMs,
+                onUnlock = {
+                    parentGate {
+                        val id = profileId
+                        val kids = currentDoc.profile.kids
+                        if (id != null && kids != null) kidsDevice.unlock(id, kids)
+                        kidsTick++
+                        Guard.kidsChanged()
+                    }
+                },
+                onSwitchProfile = { parentGate { screen = Screen.PICK_PROFILE } },
             )
         } else if (currentDoc != null) {
             // Nothing is drawn until the local layout is read, which takes milliseconds and never touches the network.
@@ -573,6 +695,8 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                             profileName = currentDoc.profile.name,
                             hasInputs = inputs.isNotEmpty(),
                             actions = topBarActions,
+                            kidsMode = currentDoc.profile.kids != null,
+                            note = kidsStatus?.minutesLeft?.let { stringResource(R.string.kids_time_left, duration(context, it)) },
                         )
                     },
                     actions = tileActions,
@@ -654,12 +778,16 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                         },
                         profile = profileActions,
                         backup = backupActions,
+                        kids = kidsActions,
                     ),
                 )
             }
         }
     }
 }
+
+/** How often the launcher re-checks a kids profile's time and bedtime while it is on screen. */
+private const val KIDS_REFRESH_MS = 30_000L
 
 @Composable
 private fun RowEditor(

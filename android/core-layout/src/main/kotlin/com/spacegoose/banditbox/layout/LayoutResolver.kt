@@ -36,7 +36,8 @@ data class ResolvedAppsRow(
 object LayoutResolver {
     fun appsRows(doc: LayoutDocument, installed: Set<String>): List<ResolvedAppsRow> {
         val hidden = doc.hiddenApps.toSet()
-        fun visible(pkg: String) = pkg in installed && pkg !in hidden
+        val approved = doc.profile.kids?.approvedApps?.toSet()
+        fun visible(pkg: String) = pkg in installed && pkg !in hidden && (approved == null || pkg in approved)
         val folders = doc.folders.associateBy { it.id }
 
         return doc.rows.filterIsInstance<Row.Apps>().mapNotNull { row ->
@@ -80,9 +81,10 @@ object LayoutResolver {
         return { pkg -> pkg in installed && pkg !in hidden && (approved == null || pkg in approved) }
     }
 
-    /** Apps for the All apps screen: everything installed that isn't hidden. */
+    /** Apps for the All apps screen: everything installed that isn't hidden. A kids profile sees approved apps only. */
     fun allApps(doc: LayoutDocument, installedInOrder: List<String>): List<String> {
         val hidden = doc.hiddenApps.toSet()
-        return installedInOrder.filter { it !in hidden }
+        val approved = doc.profile.kids?.approvedApps?.toSet()
+        return installedInOrder.filter { it !in hidden && (approved == null || it in approved) }
     }
 }
