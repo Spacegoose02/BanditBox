@@ -80,6 +80,9 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("GET /api/v1/sync/layout", s.device(s.syncLayout))
 	mux.HandleFunc("POST /api/v1/sync/ops", s.device(s.syncOps))
 	mux.HandleFunc("GET /api/v1/sync/stream", s.device(s.syncStream))
+	mux.HandleFunc("POST /api/v1/sync/seed", s.device(s.syncSeed))
+	mux.HandleFunc("POST /api/v1/sync/profiles", s.device(s.syncCreateProfile))
+	mux.HandleFunc("DELETE /api/v1/sync/profiles/{id}", s.device(s.syncDeleteProfile))
 
 	// Everything outside /api/ is the web UI.
 	ui := webui.Handler()

@@ -124,7 +124,7 @@ func (s *server) syncOps(w http.ResponseWriter, r *http.Request, d store.Device)
 
 // streamMessage is sent over the sync WebSocket.
 type streamMessage struct {
-	Type      string `json:"type"` // "version"
+	Type      string `json:"type"` // "version", or "profiles": fetch /device/me again
 	ProfileID string `json:"profileId,omitempty"`
 	Version   int64  `json:"version,omitempty"`
 }
@@ -172,7 +172,7 @@ func (s *server) syncStream(w http.ResponseWriter, r *http.Request, d store.Devi
 				return
 			}
 		case <-sub.Ready:
-			versions, kicked := sub.Take()
+			versions, profilesChanged, kicked := sub.Take()
 			if kicked {
 				conn.Close(4401, "this TV is no longer paired")
 				return
@@ -182,6 +182,11 @@ func (s *server) syncStream(w http.ResponseWriter, r *http.Request, d store.Devi
 			if err != nil {
 				conn.Close(4401, "this TV is no longer paired")
 				return
+			}
+			if profilesChanged {
+				if err := send(ctx, conn, streamMessage{Type: "profiles"}); err != nil {
+					return
+				}
 			}
 			for id, v := range versions {
 				if cur.AllowsProfile(id) {
@@ -211,4 +216,87 @@ func (s *server) allowed(w http.ResponseWriter, d store.Device, profileID string
 		return false
 	}
 	return true
+}
+
+type seedRequest struct {
+	Layouts []json.RawMessage `json:"layouts"`
+}
+
+// syncSeed lets the first TV on a fresh server upload the layouts it already has:
+// POST /api/v1/sync/seed. Only a TV allowed every profile may do it.
+func (s *server) syncSeed(w http.ResponseWriter, r *http.Request, d store.Device) {
+	if len(d.Profiles) > 0 {
+		writeError(w, http.StatusForbidden, "only a TV allowed every profile can seed the server")
+		return
+	}
+	var req seedRequest
+	if !readJSON(w, r, &req) {
+		return
+	}
+	layouts, err := s.Store.Seed(r.Context(), req.Layouts)
+	if errors.Is(err, store.ErrNotFresh) {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+	if s.layoutError(w, r, err) {
+		return
+	}
+	out := make([]layoutResponse, len(layouts))
+	for i, l := range layouts {
+		out[i] = layoutResponse{ProfileID: l.ProfileID, Version: l.Version, Doc: l.Doc}
+	}
+	s.Hub.ProfilesChanged()
+	s.Log.Info("server seeded from a TV", "device", d.ID, "profiles", len(out))
+	writeJSON(w, http.StatusOK, out)
+}
+
+// syncCreateProfile adds a profile made on a TV: POST /api/v1/sync/profiles with
+// the layout document. A TV limited to some profiles gets the new one added to its list.
+func (s *server) syncCreateProfile(w http.ResponseWriter, r *http.Request, d store.Device) {
+	var doc json.RawMessage
+	if !readJSON(w, r, &doc) {
+		return
+	}
+	var head struct {
+		ProfileID string `json:"profileId"`
+	}
+	_ = json.Unmarshal(doc, &head)
+	if !profileID.MatchString(head.ProfileID) {
+		writeError(w, http.StatusBadRequest, "profileId is missing or not a valid id")
+		return
+	}
+	l, err := s.Store.PutLayout(r.Context(), head.ProfileID, -1, doc)
+	if s.layoutError(w, r, err) {
+		return
+	}
+	if len(d.Profiles) > 0 {
+		if err := s.Store.UpdateDevice(r.Context(), d.ID, d.Name, append(d.Profiles, l.ProfileID)); err != nil {
+			s.internal(w, r, err)
+			return
+		}
+	}
+	s.Hub.ProfilesChanged()
+	writeJSON(w, http.StatusCreated, layoutResponse{ProfileID: l.ProfileID, Version: l.Version, Doc: l.Doc})
+}
+
+// syncDeleteProfile removes a profile deleted on a TV: DELETE /api/v1/sync/profiles/{id}.
+func (s *server) syncDeleteProfile(w http.ResponseWriter, r *http.Request, d store.Device) {
+	id := r.PathValue("id")
+	if !s.allowed(w, d, id) {
+		return
+	}
+	list, err := s.Store.ListProfiles(r.Context())
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	if len(list) == 1 && list[0].ID == id {
+		writeError(w, http.StatusConflict, "can't delete the last profile")
+		return
+	}
+	if s.layoutError(w, r, s.Store.DeleteProfile(r.Context(), id)) {
+		return
+	}
+	s.Hub.ProfilesChanged()
+	w.WriteHeader(http.StatusNoContent)
 }

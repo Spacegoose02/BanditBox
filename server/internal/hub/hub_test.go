@@ -10,11 +10,13 @@ func TestCoalescesToLatest(t *testing.T) {
 	h.Publish("p", 2)
 	h.Publish("q", 7)
 	<-s.Ready
-	v, kicked := s.Take()
-	if kicked || v["p"] != 3 || v["q"] != 7 || len(v) != 2 {
+	v, profiles, kicked := s.Take()
+	if kicked || profiles || v["p"] != 3 || v["q"] != 7 || len(v) != 2 {
 		t.Fatalf("got %v %v", v, kicked)
 	}
-	if v, _ := s.Take(); len(v) != 0 {
+	h.ProfilesChanged()
+	<-s.Ready
+	if v, profiles, _ := s.Take(); len(v) != 0 || !profiles {
 		t.Fatalf("second take %v", v)
 	}
 	h.Unsubscribe(s)
@@ -28,7 +30,7 @@ func TestKick(t *testing.T) {
 	a, b := h.Subscribe("d1"), h.Subscribe("d2")
 	h.Kick("d1")
 	<-a.Ready
-	if _, kicked := a.Take(); !kicked {
+	if _, _, kicked := a.Take(); !kicked {
 		t.Fatal("d1 not kicked")
 	}
 	select {

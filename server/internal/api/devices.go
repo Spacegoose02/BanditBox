@@ -206,6 +206,9 @@ func (s *server) updateDevice(w http.ResponseWriter, r *http.Request, _ store.Ad
 		s.internal(w, r, err)
 		return
 	}
+	if req.Profiles != nil {
+		s.Hub.ProfilesChanged()
+	}
 	writeJSON(w, http.StatusOK, d)
 }
 
@@ -237,11 +240,18 @@ func (s *server) deviceMe(w http.ResponseWriter, r *http.Request, d store.Device
 			allowed = append(allowed, p)
 		}
 	}
+	fresh, err := s.Store.Fresh(r.Context())
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, struct {
 		Device   store.Device           `json:"device"`
 		Profiles []store.ProfileSummary `json:"profiles"`
 		Server   Info                   `json:"server"`
-	}{d, allowed, Info{Status: "ok", Version: s.Version}})
+		// Fresh is true while no layout has been edited: the TV may seed the server.
+		Fresh bool `json:"fresh"`
+	}{d, allowed, Info{Status: "ok", Version: s.Version}, fresh})
 }
 
 // checkProfiles makes sure every id names an existing profile.
