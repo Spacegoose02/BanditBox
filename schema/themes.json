@@ -1,0 +1,468 @@
+{
+  "version": 1,
+  "defaultTheme": "nuclear",
+  "categories": [
+    {
+      "id": "nuclear",
+      "name": "Nuclear"
+    },
+    {
+      "id": "laser",
+      "name": "Laser"
+    },
+    {
+      "id": "dark",
+      "name": "Dark"
+    },
+    {
+      "id": "kids-dark",
+      "name": "Kids dark"
+    },
+    {
+      "id": "neon",
+      "name": "Neon"
+    },
+    {
+      "id": "cinematic",
+      "name": "Cinematic"
+    },
+    {
+      "id": "futuristic",
+      "name": "Futuristic"
+    }
+  ],
+  "presets": [
+    {
+      "id": "nuclear",
+      "name": "Nuclear",
+      "category": "nuclear",
+      "colors": {
+        "background": "#0E0F13",
+        "surface": "#1A1D24",
+        "text": "#E8F5E9"
+      },
+      "accent": "#39FF14",
+      "wallpaper": "pack:future/hex-green"
+    },
+    {
+      "id": "nuclear-meltdown",
+      "name": "Meltdown",
+      "category": "nuclear",
+      "colors": {
+        "background": "#120D05",
+        "surface": "#231A0C",
+        "text": "#FFF3E0"
+      },
+      "accent": "#FFB300",
+      "wallpaper": "pack:future/hex-amber"
+    },
+    {
+      "id": "laser",
+      "name": "Laser",
+      "category": "laser",
+      "colors": {
+        "background": "#0B0508",
+        "surface": "#1C0E14",
+        "text": "#FDECEF"
+      },
+      "accent": "#FF2D55",
+      "wallpaper": "pack:future/lasers-red"
+    },
+    {
+      "id": "laser-violet",
+      "name": "Laser violet",
+      "category": "laser",
+      "colors": {
+        "background": "#0A0714",
+        "surface": "#171129",
+        "text": "#EFE9FF"
+      },
+      "accent": "#9D7BFF",
+      "wallpaper": "pack:future/lasers-violet"
+    },
+    {
+      "id": "dark",
+      "name": "Dark",
+      "category": "dark",
+      "colors": {
+        "background": "#0F1115",
+        "surface": "#1B1E24",
+        "text": "#E6E8EC"
+      },
+      "accent": "#8AB4F8",
+      "wallpaper": "none"
+    },
+    {
+      "id": "dark-oled",
+      "name": "OLED black",
+      "category": "dark",
+      "colors": {
+        "background": "#000000",
+        "surface": "#121212",
+        "text": "#D0D0D0"
+      },
+      "accent": "#BDBDBD",
+      "wallpaper": "none"
+    },
+    {
+      "id": "kids-dark",
+      "name": "Night light",
+      "category": "kids-dark",
+      "colors": {
+        "background": "#0D1330",
+        "surface": "#1A2250",
+        "text": "#FFF8E1"
+      },
+      "accent": "#FFD54F",
+      "wallpaper": "pack:kids/night-sky"
+    },
+    {
+      "id": "kids-dark-jelly",
+      "name": "Jelly",
+      "category": "kids-dark",
+      "colors": {
+        "background": "#1A0F2E",
+        "surface": "#2A1A47",
+        "text": "#FFF0F7"
+      },
+      "accent": "#FF80BF",
+      "wallpaper": "pack:kids/bubbles"
+    },
+    {
+      "id": "neon",
+      "name": "Neon",
+      "category": "neon",
+      "colors": {
+        "background": "#0A0612",
+        "surface": "#170E26",
+        "text": "#F5E9FF"
+      },
+      "accent": "#FF2BD6",
+      "wallpaper": "pack:future/synthwave"
+    },
+    {
+      "id": "neon-tokyo",
+      "name": "Neon Tokyo",
+      "category": "neon",
+      "colors": {
+        "background": "#050B12",
+        "surface": "#0E1A26",
+        "text": "#E0FBFF"
+      },
+      "accent": "#00E5FF",
+      "wallpaper": "pack:future/grid-cyan"
+    },
+    {
+      "id": "cinematic",
+      "name": "Cinematic",
+      "category": "cinematic",
+      "colors": {
+        "background": "#0C0A08",
+        "surface": "#1C1814",
+        "text": "#F3EDE4"
+      },
+      "accent": "#E5B54A",
+      "wallpaper": "pack:cinema/spotlight"
+    },
+    {
+      "id": "cinematic-noir",
+      "name": "Noir",
+      "category": "cinematic",
+      "colors": {
+        "background": "#080808",
+        "surface": "#161616",
+        "text": "#E0E0E0"
+      },
+      "accent": "#CFCFCF",
+      "wallpaper": "pack:cinema/noir"
+    },
+    {
+      "id": "futuristic",
+      "name": "Futuristic",
+      "category": "futuristic",
+      "colors": {
+        "background": "#04100F",
+        "surface": "#0B1F1D",
+        "text": "#E0FFF9"
+      },
+      "accent": "#64FFDA",
+      "wallpaper": "pack:future/circuit"
+    },
+    {
+      "id": "futuristic-mars",
+      "name": "Mars base",
+      "category": "futuristic",
+      "colors": {
+        "background": "#140806",
+        "surface": "#26120D",
+        "text": "#FFE9E2"
+      },
+      "accent": "#FF6E40",
+      "wallpaper": "pack:space/red-planet"
+    }
+  ],
+  "wallpaperPacks": [
+    {
+      "id": "space",
+      "name": "Space",
+      "wallpapers": [
+        {
+          "id": "starfield",
+          "name": "Starfield",
+          "style": "starfield",
+          "palette": [
+            "#02030A",
+            "#0A0F24",
+            "#FFFFFF",
+            "#8FB8FF"
+          ]
+        },
+        {
+          "id": "nebula",
+          "name": "Nebula",
+          "style": "nebula",
+          "palette": [
+            "#05030F",
+            "#120826",
+            "#B455FF",
+            "#3FA9F5"
+          ]
+        },
+        {
+          "id": "red-planet",
+          "name": "Red planet",
+          "style": "planet",
+          "palette": [
+            "#07030A",
+            "#1A0A08",
+            "#E2552E",
+            "#FFB38A"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Nature",
+      "wallpapers": [
+        {
+          "id": "hills",
+          "name": "Hills at dusk",
+          "style": "hills",
+          "palette": [
+            "#1B2240",
+            "#3E2F5B",
+            "#2E7D5B",
+            "#F4A259"
+          ]
+        },
+        {
+          "id": "aurora",
+          "name": "Aurora",
+          "style": "aurora",
+          "palette": [
+            "#020814",
+            "#06142A",
+            "#3DFFB0",
+            "#7A5CFF"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ocean",
+      "name": "Ocean",
+      "wallpapers": [
+        {
+          "id": "deep",
+          "name": "Deep blue",
+          "style": "waves",
+          "palette": [
+            "#020B18",
+            "#04213D",
+            "#1E88E5",
+            "#4DD0E1"
+          ]
+        },
+        {
+          "id": "sunset",
+          "name": "Ocean sunset",
+          "style": "waves",
+          "palette": [
+            "#2B0F2E",
+            "#0B1E3A",
+            "#FF7A45",
+            "#FFC15E"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "future",
+      "name": "Future",
+      "wallpapers": [
+        {
+          "id": "synthwave",
+          "name": "Synthwave",
+          "style": "grid",
+          "palette": [
+            "#0A0418",
+            "#2A0838",
+            "#FF2BD6",
+            "#FFB000"
+          ]
+        },
+        {
+          "id": "grid-cyan",
+          "name": "Cyan grid",
+          "style": "grid",
+          "palette": [
+            "#02070D",
+            "#06182A",
+            "#00E5FF",
+            "#2979FF"
+          ]
+        },
+        {
+          "id": "hex-green",
+          "name": "Green hex",
+          "style": "hex",
+          "palette": [
+            "#050807",
+            "#0C1410",
+            "#39FF14",
+            "#1B5E20"
+          ]
+        },
+        {
+          "id": "hex-amber",
+          "name": "Amber hex",
+          "style": "hex",
+          "palette": [
+            "#0A0703",
+            "#1A1206",
+            "#FFB300",
+            "#FF6F00"
+          ]
+        },
+        {
+          "id": "circuit",
+          "name": "Circuit",
+          "style": "circuit",
+          "palette": [
+            "#020C0B",
+            "#06201D",
+            "#64FFDA",
+            "#00897B"
+          ]
+        },
+        {
+          "id": "lasers-red",
+          "name": "Red lasers",
+          "style": "lasers",
+          "palette": [
+            "#060205",
+            "#140509",
+            "#FF2D55",
+            "#FF8A80"
+          ]
+        },
+        {
+          "id": "lasers-violet",
+          "name": "Violet lasers",
+          "style": "lasers",
+          "palette": [
+            "#05030C",
+            "#110A24",
+            "#9D7BFF",
+            "#40C4FF"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sports",
+      "name": "Sports",
+      "wallpapers": [
+        {
+          "id": "pitch",
+          "name": "Pitch",
+          "style": "field",
+          "palette": [
+            "#06210F",
+            "#0B3A1B",
+            "#E8F5E9",
+            "#43A047"
+          ]
+        },
+        {
+          "id": "arena",
+          "name": "Arena lights",
+          "style": "spotlight",
+          "palette": [
+            "#03060F",
+            "#0A1630",
+            "#82B1FF",
+            "#FFFFFF"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kids",
+      "name": "Kids",
+      "wallpapers": [
+        {
+          "id": "night-sky",
+          "name": "Night sky",
+          "style": "starfield",
+          "palette": [
+            "#0D1330",
+            "#1C2A66",
+            "#FFF59D",
+            "#FFD54F"
+          ]
+        },
+        {
+          "id": "bubbles",
+          "name": "Bubbles",
+          "style": "bubbles",
+          "palette": [
+            "#1A0F2E",
+            "#2D1B55",
+            "#FF80BF",
+            "#80D8FF"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cinema",
+      "name": "Cinema",
+      "wallpapers": [
+        {
+          "id": "spotlight",
+          "name": "Spotlight",
+          "style": "spotlight",
+          "palette": [
+            "#0C0A08",
+            "#1C140A",
+            "#E5B54A",
+            "#FFF3D6"
+          ]
+        },
+        {
+          "id": "noir",
+          "name": "Noir",
+          "style": "spotlight",
+          "palette": [
+            "#050505",
+            "#151515",
+            "#CFCFCF",
+            "#FFFFFF"
+          ]
+        }
+      ]
+    }
+  ]
+}

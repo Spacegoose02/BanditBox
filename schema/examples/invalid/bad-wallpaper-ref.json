@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "profileId": "p",
+  "version": 1,
+  "profile": { "name": "A" },
+  "theme": { "wallpaper": "https://example.com/wall.jpg" },
+  "rows": []
+}

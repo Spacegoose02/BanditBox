@@ -155,7 +155,41 @@ object LayoutEdits {
         return if (kept.size == doc.remap.size) doc else doc.copy(remap = kept).bumped()
     }
 
+    // ---- Theme ----
+
+    /**
+     * Switches to a preset: its colors, accent and wallpaper. Choices that aren't part of a
+     * preset's look (adaptive accent, icon pack, screensaver, dimming) are kept.
+     */
+    fun applyPreset(doc: LayoutDocument, presetId: String): LayoutDocument =
+        doc.editTheme { it.copy(id = presetId, accent = null, colors = null, wallpaper = null) }
+
+    /** [ref] is a media or pack ref, [Theme.WALLPAPER_NONE], or null for the preset's own. */
+    fun setWallpaper(doc: LayoutDocument, ref: String?): LayoutDocument = doc.editTheme { it.copy(wallpaper = ref) }
+
+    /** [dim] from 0 to 0.9, or null for the default. */
+    fun setWallpaperDim(doc: LayoutDocument, dim: Float?): LayoutDocument =
+        doc.editTheme { it.copy(wallpaperDim = dim?.coerceIn(0f, ThemeResolver.MAX_DIM)) }
+
+    /** [accent] is "#RRGGBB", or null for the preset's. Turns off the adaptive accent. */
+    fun setAccent(doc: LayoutDocument, accent: String?): LayoutDocument =
+        doc.editTheme { it.copy(accent = accent, adaptiveAccent = false) }
+
+    fun setAdaptiveAccent(doc: LayoutDocument, on: Boolean): LayoutDocument = doc.editTheme { it.copy(adaptiveAccent = on) }
+
+    fun setIconPack(doc: LayoutDocument, pack: IconPackRef): LayoutDocument =
+        doc.editTheme { it.copy(iconPack = if (pack == IconPackRef.System) null else pack.id) }
+
+    fun setScreensaver(doc: LayoutDocument, type: ScreensaverType, timeoutMin: Int? = doc.theme?.screensaver?.timeoutMin): LayoutDocument =
+        doc.editTheme { it.copy(screensaver = Screensaver(type.id, timeoutMin?.coerceIn(1, 120))) }
+
     // ---- Helpers ----
+
+    private inline fun LayoutDocument.editTheme(change: (Theme) -> Theme): LayoutDocument {
+        val before = theme ?: Theme()
+        val after = change(before)
+        return if (after == before) this else copy(theme = after).bumped()
+    }
 
     private fun LayoutDocument.bumped() = copy(version = version + 1)
 

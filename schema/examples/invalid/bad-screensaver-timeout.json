@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "profileId": "p",
+  "version": 1,
+  "profile": { "name": "A" },
+  "theme": { "screensaver": { "type": "oled-drift", "timeoutMin": 0 } },
+  "rows": []
+}
