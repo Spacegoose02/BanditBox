@@ -15,6 +15,7 @@ JSON Schemas (draft 2020-12) shared by the TV app and the server. They are the s
 ## Layout document notes (v1)
 
 - Row items are package names or `folder:<id>`.
+- `watchnext` and `channel` rows show what other apps publish to the Android TV home screen. See [docs/content-rows.md](../docs/content-rows.md).
 - `wallpaper` is content-addressed media on the server: `media:sha256-<hex>`.
 - `pin` is a hash, never the PIN itself.
 - `theme` is optional and every field in it is too: a missing field takes the preset's value. `theme.id` names a preset from `themes.json` (one or more per category: nuclear, laser, dark, kids-dark, neon, cinematic, futuristic). `wallpaper` is `media:sha256-<hex>` (an uploaded picture), `pack:<pack>/<wallpaper>` (built in, drawn as vector art), `none`, or missing for the preset's own. `adaptiveAccent` takes the accent from the wallpaper. `iconPack` is `system`, `banditbox-uniform`, `banditbox-mono` or `pkg:<package>` for an installed ADW/Nova icon pack. The `oled-` screensavers are drawn by the launcher on black and never hold a pixel in place.

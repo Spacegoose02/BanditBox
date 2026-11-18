@@ -13,6 +13,9 @@
     <!-- Shows Ethernet / Wi-Fi / Offline in the top bar. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Posters on Continue watching and channel rows are often https links. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!--
         Kids screen-time limit: reads how long apps were open. Granted by the user in Usage access
         settings, or by ADB: adb shell appops set com.spacegoose.banditbox GET_USAGE_STATS allow
