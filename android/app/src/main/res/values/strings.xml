@@ -68,6 +68,25 @@
     <string name="launch_on_boot_on">Launch on boot</string>
     <string name="launch_on_boot_off">Don\'t launch on boot</string>
 
+    <!-- Home button setup -->
+    <string name="home_setup_title">Home button</string>
+    <string name="home_setup_ok">The Home button opens BanditBox.</string>
+    <string name="home_setup_not_ok">The Home button still opens the TV\'s own launcher.</string>
+    <string name="home_default_yes">✓ BanditBox is the default Home app.</string>
+    <string name="home_default_no">✗ BanditBox is not the default Home app. Google TV doesn\'t let you change this, so use the service below.</string>
+    <string name="home_service_on">✓ The BanditBox Home button service is on.</string>
+    <string name="home_service_off">✗ The BanditBox Home button service is off.</string>
+    <string name="home_setup_steps">On Google TV (onn 4K): open Accessibility settings, choose \"BanditBox Home button\", and turn it on. On Nvidia Shield: open Home app settings and choose BanditBox, or turn on the service.</string>
+    <string name="open_accessibility_settings">Accessibility settings</string>
+    <string name="open_home_settings">Home app settings</string>
+    <string name="adb_title">ADB commands (optional, for power users)</string>
+    <string name="adb_intro">Run these from a computer with ADB connected to this TV.</string>
+    <string name="adb_set_home">Make BanditBox the default Home app (Shield and stock Android TV):</string>
+    <string name="adb_enable_service">Turn on the Home button service. This replaces any other accessibility services you have on:</string>
+    <string name="adb_enable_accessibility">Then switch accessibility on:</string>
+    <string name="adb_disable_stock">Advanced: disable the stock launcher. This also hides its recommendations and may affect some system screens:</string>
+    <string name="adb_enable_stock">Undo that:</string>
+
     <!-- Hidden apps -->
     <string name="hidden_apps">Hidden apps</string>
     <string name="hidden_apps_title">Hidden apps (select to show again)</string>
