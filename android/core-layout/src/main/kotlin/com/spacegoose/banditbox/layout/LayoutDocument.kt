@@ -45,19 +45,41 @@ data class Kids(
 @Serializable
 data class Bedtime(val start: String, val end: String)
 
+/** How a profile looks. Missing fields take the preset's value; [ThemeResolver] works out the result. */
 @Serializable
 data class Theme(
+    /** A [ThemeCatalog] preset id, or a custom theme's id. */
     val id: String? = null,
-    /** "#RRGGBB" or "#AARRGGBB". */
+    /** "#RRGGBB" or "#AARRGGBB": replaces the preset's accent. */
     val accent: String? = null,
-    /** "media:sha256-<hex>" or null. */
+    /** Take the accent from the wallpaper. */
+    val adaptiveAccent: Boolean = false,
+    val colors: ThemeColors? = null,
+    /** "media:sha256-<hex>", "pack:<pack>/<wallpaper>", "none", or null for the preset's wallpaper. */
     val wallpaper: String? = null,
+    /** 0 to 0.9, or null for the default (0 for pack wallpapers, 0.45 for pictures). */
+    val wallpaperDim: Float? = null,
+    /** "system", "banditbox-uniform", "banditbox-mono", "pkg:<package>", or null for system. */
     val iconPack: String? = null,
     val screensaver: Screensaver? = null,
+) {
+    companion object {
+        const val WALLPAPER_NONE = "none"
+        const val MEDIA_PREFIX = "media:sha256-"
+    }
+}
+
+/** Overrides for the preset's colors, each "#RRGGBB" or "#AARRGGBB". */
+@Serializable
+data class ThemeColors(
+    val background: String? = null,
+    val surface: String? = null,
+    val text: String? = null,
 )
 
+/** [type] is "none", "system", "oled-drift", "oled-starfield" or "oled-black". */
 @Serializable
-data class Screensaver(val type: String)
+data class Screensaver(val type: String, val timeoutMin: Int? = null)
 
 @Serializable
 sealed interface Row {

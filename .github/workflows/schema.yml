@@ -21,6 +21,8 @@ jobs:
       - run: pip install check-jsonschema==0.39.0
       - name: Schemas are valid JSON Schema
         run: check-jsonschema --check-metaschema *.schema.json
+      - name: Theme catalog passes
+        run: check-jsonschema --schemafile themes.schema.json themes.json
       - name: Op examples pass
         run: check-jsonschema --schemafile op.schema.json examples/ops/*.json
       - name: Invalid ops fail

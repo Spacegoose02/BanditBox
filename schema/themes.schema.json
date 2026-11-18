@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banditbox.dev/schema/themes.schema.json",
+  "title": "BanditBox theme catalog",
+  "description": "The built-in theme presets and wallpaper packs, as themes.json lists them. A layout document's theme.id names a preset and theme.wallpaper can name a pack wallpaper as pack:<pack>/<wallpaper>.",
+  "type": "object",
+  "required": ["version", "defaultTheme", "categories", "presets", "wallpaperPacks"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "defaultTheme": { "$ref": "#/$defs/id", "description": "The preset drawn when a profile has no theme." },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "additionalProperties": false,
+        "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "type": "string" } }
+      }
+    },
+    "presets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "colors", "accent", "wallpaper"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": { "type": "string" },
+          "category": { "$ref": "#/$defs/id" },
+          "colors": {
+            "type": "object",
+            "required": ["background", "surface", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "background": { "$ref": "#/$defs/color" },
+              "surface": { "$ref": "#/$defs/color" },
+              "text": { "$ref": "#/$defs/color" }
+            }
+          },
+          "accent": { "$ref": "#/$defs/color" },
+          "wallpaper": { "type": "string", "pattern": "^(none|pack:[a-z0-9-]{1,32}/[a-z0-9-]{1,32})$" }
+        }
+      }
+    },
+    "wallpaperPacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "wallpapers"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
+          "name": { "type": "string" },
+          "wallpapers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "style", "palette"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
+                "name": { "type": "string" },
+                "style": {
+                  "description": "How the TV draws it, with vector shapes and no bitmap.",
+                  "enum": ["aurora", "bubbles", "circuit", "field", "grid", "hex", "hills", "lasers", "nebula", "planet", "spotlight", "starfield", "waves"]
+                },
+                "palette": {
+                  "description": "Background top, background bottom, primary, secondary. An adaptive accent picks from the last two.",
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/color" },
+                  "minItems": 4,
+                  "maxItems": 4
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$" },
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+  }
+}
