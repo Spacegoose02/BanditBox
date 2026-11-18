@@ -1,0 +1,3 @@
+# The built web UI is copied here by the Docker build (or by hand, see web/README.md).
+dist/*
+!dist/.keep
