@@ -7,10 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -30,6 +34,9 @@ fun AppGrid(
     place: Place,
     modifier: Modifier = Modifier,
 ) {
+    // Open with the first app focused.
+    val firstTile = remember { FocusRequester() }
+    LaunchedEffect(apps.isNotEmpty()) { if (apps.isNotEmpty()) focusWhenReady(firstTile) }
     Column(modifier = modifier) {
         Text(text = title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 12.dp))
         LazyVerticalGrid(
@@ -38,13 +45,14 @@ fun AppGrid(
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(12.dp),
         ) {
-            items(apps, key = { it.packageName }) { app ->
+            itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
                 AppTile(
                     app = app,
                     visuals = visuals,
                     spec = GRID_TILE,
                     onClick = { actions.onOpen(app) },
                     onLongClick = { actions.onAppMenu(app, place) },
+                    modifier = if (index == 0) Modifier.focusRequester(firstTile) else Modifier,
                 )
             }
         }
