@@ -49,6 +49,10 @@ fun TopBar(
     hasInputs: Boolean,
     actions: TopBarActions,
     modifier: Modifier = Modifier,
+    /** Kids profile: no inputs or network buttons, which lead out of the launcher. */
+    kidsMode: Boolean = false,
+    /** Shown after the clock, for example a kids profile's time left today. */
+    note: String? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -56,13 +60,16 @@ fun TopBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if ("clock" in items) Clock()
+        if (note != null) {
+            Text(text = note, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        }
         Spacer(Modifier.weight(1f))
         Button(onClick = actions.onAllApps) { Text(stringResource(R.string.all_apps)) }
         for (item in items) {
             when (item) {
                 "profile" -> Button(onClick = actions.onProfile) { Text(profileName) }
-                "inputs" -> if (hasInputs) Button(onClick = actions.onInputs) { Text(stringResource(R.string.inputs)) }
-                "network" -> NetworkButton(onClick = actions.onNetwork)
+                "inputs" -> if (hasInputs && !kidsMode) Button(onClick = actions.onInputs) { Text(stringResource(R.string.inputs)) }
+                "network" -> if (!kidsMode) NetworkButton(onClick = actions.onNetwork)
                 "settings" -> Button(onClick = actions.onSettings) { Text(stringResource(R.string.settings)) }
             }
         }

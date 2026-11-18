@@ -56,19 +56,24 @@
     },
     "kids": {
       "type": "object",
+      "description": "Present only on a kids profile. The TV shows approved apps only, enforces the limits below, draws a kids-safe theme, and asks for parentPin before settings, switching profiles or lifting a lock.",
       "additionalProperties": false,
       "properties": {
-        "approvedApps": { "type": "array", "items": { "$ref": "#/$defs/packageName" }, "uniqueItems": true },
-        "dailyLimitMin": { "type": ["integer", "null"], "minimum": 1, "maximum": 1440 },
+        "parentPin": { "type": ["string", "null"], "description": "Hash of the parent PIN, same format as profile.pin. Null leaves the parent options open." },
+        "approvedApps": { "type": "array", "items": { "$ref": "#/$defs/packageName" }, "uniqueItems": true, "description": "The only apps this profile can see or open." },
+        "dailyLimitMin": { "type": ["integer", "null"], "minimum": 1, "maximum": 1440, "description": "Minutes of app time a day, counted from midnight on the TV. Null means no limit." },
+        "warnMin": { "type": "integer", "minimum": 0, "maximum": 60, "default": 5, "description": "Minutes of warning before the limit or bedtime. 0 turns the warning off." },
         "bedtime": {
           "type": ["object", "null"],
+          "description": "Lock window, local to the TV. An end earlier than start runs past midnight.",
           "required": ["start", "end"],
           "additionalProperties": false,
           "properties": {
             "start": { "$ref": "#/$defs/clockTime" },
             "end": { "$ref": "#/$defs/clockTime" }
           }
-        }
+        },
+        "unlockMin": { "type": "integer", "minimum": 5, "maximum": 240, "default": 30, "description": "How long the parent PIN lifts a bedtime or time-up lock." }
       }
     },
     "theme": {

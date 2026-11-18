@@ -7,6 +7,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 import com.spacegoose.banditbox.layout.ResolvedTheme
+import com.spacegoose.banditbox.layout.Theme
+import com.spacegoose.banditbox.layout.ThemeCatalog
 import com.spacegoose.banditbox.layout.ThemeColorMath
 import com.spacegoose.banditbox.layout.ThemeResolver
 
@@ -42,4 +44,23 @@ fun BanditBoxTheme(theme: ResolvedTheme = ThemeResolver.resolve(null), content: 
     androidx.compose.runtime.CompositionLocalProvider(LocalBanditTheme provides theme) {
         MaterialTheme(colorScheme = colors, content = content)
     }
+}
+
+/**
+ * The theme for a whole profile kind: a kids profile always draws with a kids-dark preset
+ * (bright, high-contrast and calm), and only the parent PIN reaches the settings that could
+ * change that.
+ */
+@Composable
+fun BanditBoxTheme(kids: Boolean, content: @Composable () -> Unit) {
+    BanditBoxTheme(ThemeResolver.resolve(if (kids) Theme(id = KIDS_PRESET_ID) else null), content)
+}
+
+const val KIDS_PRESET_ID = com.spacegoose.banditbox.layout.LayoutEdits.KIDS_THEME_ID
+const val KIDS_CATEGORY_ID = "kids-dark"
+
+/** [theme] for a kids profile: kept when it is a kids-dark preset, otherwise switched to one. */
+fun kidsSafe(theme: Theme?): Theme {
+    val base = theme ?: Theme()
+    return if (ThemeCatalog.preset(base.id)?.category == KIDS_CATEGORY_ID) base else base.copy(id = KIDS_PRESET_ID, accent = null, colors = null)
 }
