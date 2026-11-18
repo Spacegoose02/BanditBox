@@ -26,7 +26,17 @@ The JSON connector is the way in for anything else, Cinemask included: serve a f
 
 ## Route 2: apps on the TV
 
-An Android app on the TV can publish feeds itself through a content provider, with no server involved. This is for apps whose data lives on the TV, such as Wavelength's now playing. The provider contract and the `banditbox-plugin-sdk` library come in a later change.
+An Android app on the TV can publish feeds itself through a content provider, with no server involved. This is for apps whose data lives on the TV, such as Wavelength's now playing. 
+
+How it works:
+
+- The app declares an exported content provider with the authority `<package>.banditbox` and an intent filter for the action `com.spacegoose.banditbox.action.WIDGET_FEEDS`.
+- BanditBox finds these providers while it is in front, calls `getFeeds` on each one, and reads the Bundle string `feeds`, which holds `{"feeds":[...]}` in the feed format below.
+- The app calls `notifyChange` on `content://<authority>/feeds` when its cards change, and BanditBox reads them again.
+- Every link opens in the app that published the feed. Pictures must be https, or the app's own `content://` or `android.resource://` URIs.
+- At most 20 feeds and 50 cards per feed are kept. When the server and an app publish the same feed id, the server's feed wins.
+
+The [`banditbox-plugin-sdk`](../android/plugin-sdk/README.md) library does all of this for you. It is published to GitHub Packages when a tag like `sdk-v0.1.0` is pushed.
 
 ## The feed format
 

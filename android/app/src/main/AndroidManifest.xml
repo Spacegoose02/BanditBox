@@ -41,6 +41,10 @@
             <action android:name="android.intent.action.OPEN_DOCUMENT" />
             <data android:mimeType="image/*" />
         </intent>
+        <!-- Apps that put widget feeds on the home screen (android/plugin-sdk). -->
+        <intent>
+            <action android:name="com.spacegoose.banditbox.action.WIDGET_FEEDS" />
+        </intent>
     </queries>
 
     <application

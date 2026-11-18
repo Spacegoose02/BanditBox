@@ -83,6 +83,7 @@ import com.spacegoose.banditbox.sync.DiskCopy
 import com.spacegoose.banditbox.sync.WidgetSnapshot
 import com.spacegoose.banditbox.layout.WidgetFeeds
 import com.spacegoose.banditbox.system.WidgetLaunch
+import com.spacegoose.banditbox.system.PluginFeeds
 import com.spacegoose.banditbox.sync.SyncController
 import com.spacegoose.banditbox.system.BackupFiles
 import com.spacegoose.banditbox.system.BackupSource
@@ -728,10 +729,16 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     // ---- Widget rows and top bar widgets ----
     val noWidgets = remember { MutableStateFlow(WidgetSnapshot.EMPTY) }
     val serverWidgets by (deps.sync?.widgets ?: noWidgets).collectAsState()
+    // Apps on the TV that publish feeds (banditbox-plugin-sdk): read while in front, and again
+    // when the installed apps change.
+    val plugins = remember { PluginFeeds(context) }
+    val pluginWidgets by plugins.feeds.collectAsState()
+    LaunchedEffect(foreground, byPackage.keys) { if (foreground) plugins.watch() }
     val widgetKids = currentDoc?.profile?.kids != null
-    val widgetState = remember(serverWidgets, widgetKids, contentAllowed) {
+    val widgetState = remember(serverWidgets, pluginWidgets, widgetKids, contentAllowed) {
         WidgetState(
-            feeds = serverWidgets.feeds,
+            // The server's feeds win over an app's feed with the same id.
+            feeds = pluginWidgets + serverWidgets.feeds,
             kids = widgetKids,
             allowed = contentAllowed,
             image = { ref ->
