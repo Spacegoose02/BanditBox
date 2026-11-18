@@ -31,6 +31,14 @@ func main() {
 	dataDir := envOr("BANDITBOX_DATA", "/config")
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		os.Exit(healthcheck(addr))
+	}
+	if err := dropPrivileges(dataDir); err != nil {
+		log.Error("switch to PUID/PGID", "err", err)
+		os.Exit(1)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -77,6 +85,24 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown", "err", err)
 	}
+}
+
+// healthcheck is the Docker HEALTHCHECK: the image has no shell or curl.
+func healthcheck(addr string) int {
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 1
+	}
+	c := http.Client{Timeout: 3 * time.Second}
+	res, err := c.Get("http://127.0.0.1:" + port + "/api/v1/health")
+	if err != nil {
+		return 1
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return 1
+	}
+	return 0
 }
 
 // advertise announces the server on the LAN so TVs can find it.

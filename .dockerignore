@@ -1,0 +1,5 @@
+# Only server/ and schema/ (and later web/) go into the image.
+*
+!server/
+!schema/
+server/bin/
