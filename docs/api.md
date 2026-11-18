@@ -31,6 +31,7 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 | `GET /devices` | | `[{id, name, model, profiles, created, lastSeen, appVersion}]` |
 | `PATCH /devices/{id}` | `{name?, profiles?}` | the device |
 | `DELETE /devices/{id}` | | 204. The token stops working and its stream closes |
+| `GET /apps` | | Apps installed on any paired TV, for the layout editor: `[{packageName, label, tv, devices}]`, by label. `tv` is true for apps with a TV launcher entry |
 
 ## TV
 
@@ -43,6 +44,7 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 
 ### Sync
 
+- `PUT /device/apps {apps: [{packageName, label, tv}]}` → 204. The apps installed on the TV (at most 2000), replacing what it sent before. Send it after pairing and whenever the list changes.
 - `GET /device/me` → `{device, profiles: [{id, name, version, updated}], server}`. 401 means the TV was revoked: keep the last layout and show "not synced".
 - `GET /sync/layout?profile=ID&since=V` → `{profileId, version, doc}`, or 204 if `V` is current.
 - `POST /sync/ops {profileId, baseVersion, ops}` → `{version, applied: [opId], rejected: [{opId, reason, detail?}], doc}`.

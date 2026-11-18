@@ -75,8 +75,10 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("GET /api/v1/devices", s.admin(s.listDevices))
 	mux.HandleFunc("PATCH /api/v1/devices/{id}", s.admin(s.updateDevice))
 	mux.HandleFunc("DELETE /api/v1/devices/{id}", s.admin(s.revokeDevice))
+	mux.HandleFunc("GET /api/v1/apps", s.admin(s.listApps))
 
 	mux.HandleFunc("GET /api/v1/device/me", s.device(s.deviceMe))
+	mux.HandleFunc("PUT /api/v1/device/apps", s.device(s.deviceApps))
 	mux.HandleFunc("GET /api/v1/sync/layout", s.device(s.syncLayout))
 	mux.HandleFunc("POST /api/v1/sync/ops", s.device(s.syncOps))
 	mux.HandleFunc("GET /api/v1/sync/stream", s.device(s.syncStream))
