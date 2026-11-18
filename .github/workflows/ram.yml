@@ -1,0 +1,52 @@
+name: RAM budget
+
+# Idle memory of a release build on a 2 GB Android TV emulator, held to the 80 MB budget.
+# Runs on main and by hand; the release workflow calls it before publishing.
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", "tools/ram-check.sh", ".github/workflows/ram.yml"]
+  pull_request:
+    paths: ["tools/ram-check.sh", ".github/workflows/ram.yml"]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build the minified release APK (debug-signed, for measuring only)
+        working-directory: android
+        run: ./gradlew --no-daemon :app:assembleRamcheck
+      - name: Measure on a 2 GB Android TV emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: android-tv
+          arch: x86
+          # A 1080p TV screen: bitmap and window memory scale with it, so a phone-sized default would under-count.
+          profile: tv_1080p
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: |
+            adb install -r android/app/build/outputs/apk/ramcheck/app-ramcheck.apk
+            tools/ram-check.sh com.spacegoose.banditbox.ramcheck 80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ram-report
+          path: ram-report.txt
+          if-no-files-found: ignore
