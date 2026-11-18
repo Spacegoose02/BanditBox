@@ -460,7 +460,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     }
     fun allowTvListings() {
         try {
-            askTvPermission.launch(android.Manifest.permission.READ_TV_LISTINGS)
+            askTvPermission.launch(TvProviderReader.PERMISSION)
         } catch (_: ActivityNotFoundException) {
             message(context.getString(R.string.content_allow_title), context.getString(R.string.content_denied, context.packageName))
         }

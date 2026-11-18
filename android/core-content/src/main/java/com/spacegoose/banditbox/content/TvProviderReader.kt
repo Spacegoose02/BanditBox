@@ -1,6 +1,5 @@
 package com.spacegoose.banditbox.content
 
-import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.database.ContentObserver
@@ -31,7 +30,7 @@ class TvProviderReader(context: Context) {
     private val resolver = appContext.contentResolver
 
     fun hasPermission(): Boolean =
-        appContext.checkSelfPermission(Manifest.permission.READ_TV_LISTINGS) == PackageManager.PERMISSION_GRANTED
+        appContext.checkSelfPermission(PERMISSION) == PackageManager.PERMISSION_GRANTED
 
     /**
      * A fresh snapshot now, then again whenever an app changes what it publishes. Only the
@@ -193,13 +192,19 @@ class TvProviderReader(context: Context) {
         const val WEIGHT = "weight"
     }
 
-    private companion object {
-        const val TAG = "BanditBox"
+    companion object {
+        /**
+         * Lets an app read other apps' TV listings. A runtime (dangerous) permission, but the
+         * SDK marks the constant as a system API, so it is spelled out here.
+         */
+        const val PERMISSION = "android.permission.READ_TV_LISTINGS"
+
+        private const val TAG = "BanditBox"
 
         /** A safety cap on one table; a TV with every streaming app installed has a few hundred. */
-        const val MAX_ROWS = 1000
+        private const val MAX_ROWS = 1000
 
-        val PROGRAM_COLUMNS = arrayOf(
+        private val PROGRAM_COLUMNS = arrayOf(
             Col.ID,
             Col.PACKAGE_NAME,
             Col.TITLE,
@@ -214,16 +219,16 @@ class TvProviderReader(context: Context) {
             Col.POSITION,
             Col.INTENT_URI,
         )
-        val WATCH_NEXT_COLUMNS = PROGRAM_COLUMNS + arrayOf(
+        private val WATCH_NEXT_COLUMNS = PROGRAM_COLUMNS + arrayOf(
             Col.WATCH_NEXT_TYPE,
             Col.LAST_ENGAGEMENT,
         )
-        val PREVIEW_COLUMNS = PROGRAM_COLUMNS + arrayOf(
+        private val PREVIEW_COLUMNS = PROGRAM_COLUMNS + arrayOf(
             Col.CHANNEL_ID,
             Col.WEIGHT,
             Col.BROWSABLE,
         )
-        val CHANNEL_COLUMNS = arrayOf(
+        private val CHANNEL_COLUMNS = arrayOf(
             Col.ID,
             Col.PACKAGE_NAME,
             Col.TYPE,
@@ -233,7 +238,7 @@ class TvProviderReader(context: Context) {
         )
 
         /** TvContract's aspect ratio codes (ASPECT_RATIO_*) as width / height. */
-        fun aspectOf(code: Int?): Float = when (code) {
+        private fun aspectOf(code: Int?): Float = when (code) {
             1 -> 3f / 2f
             2 -> 4f / 3f
             3 -> 1f
@@ -242,12 +247,12 @@ class TvProviderReader(context: Context) {
             else -> TvProgram.ASPECT_16_9
         }
 
-        fun Cursor.index(column: String): Int = getColumnIndex(column)
+        private fun Cursor.index(column: String): Int = getColumnIndex(column)
 
-        fun Cursor.string(column: String): String? = index(column).let { if (it < 0 || isNull(it)) null else getString(it) }
+        private fun Cursor.string(column: String): String? = index(column).let { if (it < 0 || isNull(it)) null else getString(it) }
 
-        fun Cursor.long(column: String): Long? = index(column).let { if (it < 0 || isNull(it)) null else getLong(it) }
+        private fun Cursor.long(column: String): Long? = index(column).let { if (it < 0 || isNull(it)) null else getLong(it) }
 
-        fun Cursor.int(column: String): Int? = index(column).let { if (it < 0 || isNull(it)) null else getInt(it) }
+        private fun Cursor.int(column: String): Int? = index(column).let { if (it < 0 || isNull(it)) null else getInt(it) }
     }
 }
