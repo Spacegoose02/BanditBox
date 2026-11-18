@@ -13,7 +13,7 @@
     <!-- Shows Ethernet / Wi-Fi / Offline in the top bar. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Posters on Continue watching and channel rows are often https links. -->
+    <!-- Posters on Continue watching and channel rows, and wallpaper pictures added from a link. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
@@ -33,6 +33,10 @@
         <intent>
             <action android:name="android.intent.action.OPEN_DOCUMENT" />
             <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="image/*" />
         </intent>
     </queries>
 

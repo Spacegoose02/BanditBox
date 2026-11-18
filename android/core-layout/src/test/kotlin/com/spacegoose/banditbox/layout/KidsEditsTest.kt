@@ -18,7 +18,7 @@ class KidsEditsTest {
     @Test
     fun kidsProfileStartsWithItsAppsAndTheKidsTheme() {
         val doc = kidsDoc()
-        assertEquals("kids", doc.theme?.id)
+        assertEquals(LayoutEdits.KIDS_THEME_ID, doc.theme?.id)
         assertEquals(listOf("app.wave", "app.binge"), (doc.rows.single() as Row.Apps).items)
         assertEquals("hash", doc.profile.kids?.parentPin)
         assertFalse("inputs" in doc.topBar)
@@ -76,7 +76,7 @@ class KidsEditsTest {
     @Test
     fun makeKidsKeepsRowsAndSetsTheme() {
         val doc = LayoutEdits.makeKids(DefaultLayout.create(listOf("a.b")), Kids(approvedApps = listOf("a.b")))
-        assertEquals("kids", doc.theme?.id)
+        assertEquals(LayoutEdits.KIDS_THEME_ID, doc.theme?.id)
         assertEquals(listOf("a.b"), doc.profile.kids?.approvedApps)
     }
 

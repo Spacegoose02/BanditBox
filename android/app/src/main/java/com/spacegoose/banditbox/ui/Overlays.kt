@@ -52,6 +52,7 @@ sealed interface Overlay {
     data class PickInput(val key: String, val press: Press) : Overlay
 
     data object Backup : Overlay
+    data class Themes(val page: ThemePage) : Overlay
 
     // Kids profiles. Everything past KidsAppParent is reached only through the parent PIN.
     data class KidsAppParent(val app: AppEntry) : Overlay
@@ -106,6 +107,7 @@ class OverlayContext(
     val setLaunchOnBoot: (String?) -> Unit,
     val profile: ProfileActions,
     val backup: BackupActions,
+    val theme: ThemeActions,
     val kids: KidsActions,
 ) {
     val isKids: Boolean get() = doc.profile.kids != null
@@ -168,6 +170,7 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
         is Overlay.PickApp -> PickAppDialog(overlay.key, overlay.press, ctx)
         is Overlay.PickInput -> PickInputDialog(overlay.key, overlay.press, ctx)
         Overlay.Backup -> BackupDialog(ctx)
+        is Overlay.Themes -> ThemeDialog(overlay.page, ctx)
         is Overlay.PickBackup -> PickBackupDialog(overlay.sources, ctx)
         is Overlay.KidsAppParent -> KidsAppParentDialog(overlay.app, ctx)
         Overlay.KidsSettings -> KidsSettingsDialog(ctx)
@@ -311,6 +314,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
             if (ctx.isKids) Choice(stringResource(R.string.kids_settings)) { ctx.show(Overlay.KidsSettings) } else null,
             Choice(stringResource(R.string.profile_settings, ctx.doc.profile.name)) { ctx.show(Overlay.ProfileSettings) },
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
+            Choice(stringResource(R.string.theme)) { ctx.show(Overlay.Themes(ThemePage.Main)) },
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
             Choice(stringResource(R.string.buttons)) { ctx.show(Overlay.Buttons) },
             Choice(stringResource(R.string.backup)) { ctx.show(Overlay.Backup) },

@@ -31,9 +31,14 @@ import androidx.tv.material3.Text
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.apps.IconStyle
+import com.spacegoose.banditbox.layout.IconPackRef
+import com.spacegoose.banditbox.layout.ResolvedTheme
+import com.spacegoose.banditbox.layout.ThemeColorMath
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Tile
 import com.spacegoose.banditbox.layout.TileStyle
+import com.spacegoose.banditbox.ui.theme.LocalBanditTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -59,10 +64,12 @@ fun AppTile(
     val heightPx = with(density) { size.height.roundToPx() }
     val iconPx = with(density) { (if (isIconStyle) size.height * 0.7f else size.height * 0.45f).roundToPx() }
 
-    var tile by remember(app, spec, density) { mutableStateOf<LoadedTile?>(null) }
-    LaunchedEffect(app, spec, density) {
+    val theme = LocalBanditTheme.current
+    val iconStyle = remember(theme) { theme.iconStyle() }
+    var tile by remember(app, spec, density, iconStyle) { mutableStateOf<LoadedTile?>(null) }
+    LaunchedEffect(app, spec, density, iconStyle) {
         tile = withContext(Dispatchers.IO) {
-            visuals.tile(app, widthPx, heightPx, iconPx, preferBanner = !isIconStyle)
+            visuals.tile(app, widthPx, heightPx, iconPx, preferBanner = !isIconStyle, style = iconStyle)
                 ?.let { LoadedTile(it.bitmap.asImageBitmap(), it.isBanner) }
         }
     }
@@ -150,4 +157,12 @@ private fun IconAndLabel(label: String, icon: ImageBitmap?, iconSize: androidx.c
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+/** The theme's icon pack, as the app index draws it. */
+private fun ResolvedTheme.iconStyle(): IconStyle = when (val pack = iconPack) {
+    IconPackRef.System -> IconStyle.System
+    IconPackRef.Uniform -> IconStyle.Plate(ThemeColorMath.mix(surface, text, 0.12f), tint = null)
+    IconPackRef.Mono -> IconStyle.Plate(ThemeColorMath.mix(surface, text, 0.12f), tint = accent)
+    is IconPackRef.Installed -> IconStyle.Pack(pack.packageName)
 }

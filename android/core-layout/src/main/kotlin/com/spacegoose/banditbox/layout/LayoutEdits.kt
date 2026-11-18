@@ -235,7 +235,7 @@ object LayoutEdits {
         doc.editKids { it.copy(parentPin = pinHash) }
 
     /** The theme every kids profile starts with. */
-    const val KIDS_THEME_ID = "kids"
+    const val KIDS_THEME_ID = "kids-dark"
 
     // ---- Button remapping ----
 

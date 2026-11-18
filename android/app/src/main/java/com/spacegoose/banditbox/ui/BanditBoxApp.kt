@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -13,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,6 +33,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
+import androidx.compose.ui.graphics.Color
+import android.os.SystemClock
 import androidx.tv.material3.Text
 import com.spacegoose.banditbox.BanditBoxApplication
 import com.spacegoose.banditbox.BuildConfig
@@ -67,6 +72,12 @@ import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
 import com.spacegoose.banditbox.layout.Startup
+import com.spacegoose.banditbox.layout.ThemeResolver
+import com.spacegoose.banditbox.layout.WallpaperRef
+import com.spacegoose.banditbox.system.LoadedPicture
+import com.spacegoose.banditbox.system.WallpaperFiles
+import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
+import com.spacegoose.banditbox.ui.theme.kidsSafe
 import com.spacegoose.banditbox.layout.summary
 import com.spacegoose.banditbox.system.BackupFiles
 import com.spacegoose.banditbox.system.BackupSource
@@ -78,6 +89,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
@@ -444,7 +456,93 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
         restore = ::askToRestore,
     )
 
+    // ---- Theme, wallpaper and screensaver ----
+    val wallpaperFiles = remember { WallpaperFiles(context) }
+    val wallpaperRef = ThemeResolver.wallpaperOf(doc?.theme)
+    var picture by remember { mutableStateOf<LoadedPicture?>(null) }
+    LaunchedEffect(wallpaperRef) {
+        val media = wallpaperRef as? WallpaperRef.Media
+        picture = if (media == null) null else withContext(Dispatchers.IO) { wallpaperFiles.load(media.sha256) }
+    }
+    // A kids profile always draws with a kids-dark preset; its wallpaper and screensaver still apply.
+    val docTheme = doc?.let { if (it.profile.kids != null) kidsSafe(it.theme) else it.theme }
+    val theme = remember(docTheme, picture) { ThemeResolver.resolve(docTheme, picture?.accent) }
+
+    /** Puts a picture on the current profile, then forgets old pictures no profile uses. */
+    fun addPicture(read: () -> String) {
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    Result.success(read())
+                } catch (e: IOException) {
+                    Result.failure(e)
+                } catch (e: SecurityException) {
+                    Result.failure(e)
+                }
+            }
+            result.fold(
+                onSuccess = { sha ->
+                    overlay = null
+                    edit { LayoutEdits.setWallpaper(it, WallpaperRef.Media(sha).ref) }
+                    withContext(Dispatchers.IO) {
+                        val inUse = storeLock.withLock {
+                            deps.store.profileIds().mapNotNull { id -> runCatching { deps.store.load(id) }.getOrNull()?.theme?.wallpaper }
+                        }.toMutableSet()
+                        inUse += WallpaperRef.Media(sha).ref
+                        wallpaperFiles.prune(inUse.map { it.removePrefix(com.spacegoose.banditbox.layout.Theme.MEDIA_PREFIX) }.toSet())
+                    }
+                },
+                onFailure = { e ->
+                    message(context.getString(R.string.wallpaper), context.getString(R.string.wallpaper_add_failed, e.message ?: e.toString()))
+                },
+            )
+        }
+    }
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) addPicture { wallpaperFiles.importUri(uri) }
+    }
+    val hasImagePicker = remember {
+        Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+            .resolveActivity(context.packageManager) != null
+    }
+    val themeActions = ThemeActions(
+        hasImagePicker = hasImagePicker,
+        pickImage = {
+            try {
+                pickImage.launch(arrayOf("image/*"))
+            } catch (_: ActivityNotFoundException) {
+                message(context.getString(R.string.wallpaper), context.getString(R.string.cannot_open))
+            }
+        },
+        addFromLink = { link ->
+            message(context.getString(R.string.wallpaper), context.getString(R.string.wallpaper_adding))
+            addPicture { wallpaperFiles.importUrl(link) }
+        },
+        pictures = { wallpaperFiles.list() },
+        iconPacks = { deps.visuals.iconPacks.installed() },
+    )
+
+    // The OLED screensaver starts after the profile's timeout with no button press, while the
+    // launcher is in front. Opening or changing a dialog counts as a press.
+    val resumed by rememberResumed()
+    var lastInput by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
+    var screensaverOn by remember { mutableStateOf(false) }
+    val saver = theme.screensaver
+    LaunchedEffect(saver, lastInput, resumed, overlay, openFolderId, screen) {
+        if (!resumed) {
+            screensaverOn = false
+            return@LaunchedEffect
+        }
+        if (!saver.type.isOled || screensaverOn) return@LaunchedEffect
+        delay(saver.timeoutMin * 60_000L)
+        overlay = null // nothing may stay on screen behind (or above) it
+        openFolderId = null
+        moving = null
+        screensaverOn = true
+    }
+
     LaunchedEffect(homePresses) {
+        screensaverOn = false
         // Home never skips the picker when no profile has been opened yet (boot with several profiles).
         screen = if (profileId == null && profiles.size > 1) Screen.PICK_PROFILE else Screen.HOME
         overlay = null
@@ -631,6 +729,12 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     }
 
     fun handleKey(event: KeyEvent): Boolean {
+        lastInput = SystemClock.uptimeMillis()
+        if (screensaverOn) {
+            // The press that wakes the screen does nothing else.
+            if (event.type == KeyEventType.KeyUp) screensaverOn = false
+            return true
+        }
         val m = moving
         if (m != null) {
             return when (event.key) {
@@ -657,7 +761,13 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
         return false
     }
 
-    Surface(modifier = Modifier.fillMaxSize().onPreviewKeyEvent(::handleKey)) {
+    BanditBoxTheme(theme) {
+    Box(Modifier.fillMaxSize()) {
+    WallpaperLayer(theme, picture)
+    Surface(
+        modifier = Modifier.fillMaxSize().onPreviewKeyEvent(::handleKey),
+        colors = SurfaceDefaults.colors(containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface),
+    ) {
         val lock = kidsLock
         if (screen == Screen.PICK_PROFILE) {
             ProfilePickerScreen(
@@ -778,11 +888,15 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                         },
                         profile = profileActions,
                         backup = backupActions,
+                        theme = themeActions,
                         kids = kidsActions,
                     ),
                 )
             }
         }
+    }
+    if (screensaverOn) OledScreensaver(saver.type, MaterialTheme.colorScheme.primary)
+    }
     }
 }
 

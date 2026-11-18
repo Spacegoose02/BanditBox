@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings > Theme -->
+    <string name="theme">Theme</string>
+    <string name="theme_preset">Theme: %1$s</string>
+    <string name="theme_wallpaper">Wallpaper: %1$s</string>
+    <string name="theme_accent">Accent color: %1$s</string>
+    <string name="theme_icons">Icons: %1$s</string>
+    <string name="theme_screensaver">Screensaver: %1$s</string>
+    <string name="theme_pick_category">Pick a style</string>
+
+    <string name="wallpaper">Wallpaper</string>
+    <string name="wallpaper_theme_default">The theme\'s own</string>
+    <string name="wallpaper_none">None</string>
+    <string name="wallpaper_pack">%1$s pack</string>
+    <string name="wallpaper_picture">Your picture</string>
+    <string name="wallpaper_pictures">Your pictures</string>
+    <string name="wallpaper_picture_n">Picture %1$d (%2$s)</string>
+    <string name="wallpaper_no_pictures">No pictures yet. Add one from a file or a link.</string>
+    <string name="wallpaper_from_file">Add a picture from a file…</string>
+    <string name="wallpaper_from_link">Add a picture from a link…</string>
+    <string name="wallpaper_link">Picture link (https://…)</string>
+    <string name="wallpaper_adding">Adding the picture…</string>
+    <string name="wallpaper_add_failed">Couldn\'t add that picture: %1$s</string>
+    <string name="wallpaper_dim">Darken: %1$d%%</string>
+    <string name="wallpaper_dim_title">Darken the wallpaper</string>
+    <string name="wallpaper_dim_auto">Automatic</string>
+
+    <string name="accent">Accent color</string>
+    <string name="accent_theme">The theme\'s own</string>
+    <string name="accent_wallpaper">Match the wallpaper</string>
+
+    <string name="icons">Icons</string>
+    <string name="icons_system">Each app\'s own</string>
+    <string name="icons_uniform">BanditBox uniform</string>
+    <string name="icons_mono">BanditBox mono</string>
+    <string name="icons_hint">Icons show on icon-style rows and for apps without a TV banner. Icon pack apps from the Play Store (ADW or Nova format) appear here once installed.</string>
+
+    <string name="screensaver">Screensaver</string>
+    <string name="screensaver_hint">The OLED screensavers are black and keep nothing in one place, so they can\'t burn in. Any button closes them.</string>
+    <string name="screensaver_none">Off</string>
+    <string name="screensaver_system">Android\'s own</string>
+    <string name="screensaver_drift">OLED: drifting clock</string>
+    <string name="screensaver_starfield">OLED: star field</string>
+    <string name="screensaver_black">OLED: black</string>
+    <string name="screensaver_after">Start after: %1$d min</string>
+    <string name="screensaver_after_title">Start after</string>
+    <string name="minutes">%1$d minutes</string>
+</resources>
