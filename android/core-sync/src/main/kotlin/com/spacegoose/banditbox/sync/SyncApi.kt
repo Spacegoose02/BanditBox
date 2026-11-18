@@ -39,6 +39,10 @@ interface SyncApi {
     @Serializable
     data class PairStart(val pairId: String, val code: String, val qrUrl: String, @SerialName("expiresAt") val expiresAt: String)
 
+    /** An app installed on the TV, for the web editor's app picker. */
+    @Serializable
+    data class AppReport(val packageName: String, val label: String, val tv: Boolean)
+
     @Serializable
     data class PairResult(val status: String, val deviceId: String? = null, val token: String? = null)
 }

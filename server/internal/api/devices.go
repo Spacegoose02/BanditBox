@@ -276,3 +276,33 @@ func baseURL(r *http.Request) string {
 	}
 	return scheme + "://" + r.Host
 }
+
+// deviceApps stores the apps installed on the TV, for the layout editor's app picker.
+func (s *server) deviceApps(w http.ResponseWriter, r *http.Request, d store.Device) {
+	var body struct {
+		Apps []store.App `json:"apps"`
+	}
+	if !readJSON(w, r, &body) {
+		return
+	}
+	apps, ok := store.CleanApps(body.Apps)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "apps must be at most 2000 entries with valid package names")
+		return
+	}
+	if err := s.Store.SetDeviceApps(r.Context(), d.ID, apps); err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// listApps lists the apps installed on any paired TV.
+func (s *server) listApps(w http.ResponseWriter, r *http.Request, _ store.Admin) {
+	apps, err := s.Store.KnownApps(r.Context())
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, apps)
+}

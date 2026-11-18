@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import com.spacegoose.banditbox.BuildConfig
+import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.layout.Backup
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.system.BackupFiles
@@ -105,6 +106,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
             is SyncEngine.Result.Synced -> {
                 _status.update { statusOf(states.load()).copy(lastSynced = Instant.now()) }
                 if (r.changed.isNotEmpty() || r.rejected.isNotEmpty() || r.renamed.isNotEmpty()) _results.emit(r)
+                reportApps()
                 if (foreground) openStream()
             }
             is SyncEngine.Result.Offline -> {
@@ -119,6 +121,31 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
             SyncEngine.Result.NotSignedIn -> {
                 _status.value = Status()
             }
+        }
+    }
+
+    private val appIndex by lazy { AppIndex(app) }
+    private val prefs by lazy { app.getSharedPreferences("sync", Context.MODE_PRIVATE) }
+
+    /** Sends the installed apps to the server when they changed since last time. */
+    private fun reportApps() {
+        val s = states.load()
+        if (!s.signedIn) return
+        val apps = appIndex.load()
+            .groupBy { it.packageName }
+            .map { (pkg, entries) -> SyncApi.AppReport(pkg, entries.first().label, entries.any { it.isLeanback }) }
+            .sortedBy { it.packageName }
+        val key = "${s.serverUrl}|${s.deviceId}|${apps.hashCode()}"
+        if (prefs.getString(APPS_SENT, null) == key) return
+        try {
+            HttpSyncApi(s.serverUrl!!, vault.token().orEmpty(), BuildConfig.VERSION_NAME).putApps(apps)
+            prefs.edit().putString(APPS_SENT, key).apply()
+        } catch (e: IOException) {
+            Log.i("BanditBox", "Couldn't send the app list: ${e.message}")
+        } catch (e: ServerException) {
+            Log.i("BanditBox", "Server didn't take the app list: ${e.message}")
+        } catch (_: RevokedException) {
+            // The next sync finds out and shows "not synced".
         }
     }
 
@@ -266,5 +293,6 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
     companion object {
         private const val DEBOUNCE_MS = 1_500L
         private const val RETRY_MS = 30_000L
+        private const val APPS_SENT = "apps_sent"
     }
 }

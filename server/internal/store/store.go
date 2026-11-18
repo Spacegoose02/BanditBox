@@ -110,6 +110,7 @@ var migrations = []string{
 		applied_at INTEGER NOT NULL
 	) STRICT;
 	ALTER TABLE profiles ADD COLUMN min_base INTEGER NOT NULL DEFAULT 0;`,
+	`ALTER TABLE devices ADD COLUMN apps TEXT NOT NULL DEFAULT '[]';`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {

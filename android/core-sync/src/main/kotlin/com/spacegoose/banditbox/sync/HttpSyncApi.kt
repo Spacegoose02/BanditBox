@@ -48,6 +48,13 @@ class HttpSyncApi(
     override fun createProfile(doc: JsonObject): SyncApi.ServerLayout =
         send("POST", "/sync/profiles", doc, SyncApi.ServerLayout.serializer())
 
+    /** Tells the server which apps are installed here. */
+    fun putApps(apps: List<SyncApi.AppReport>) {
+        val body = json.encodeToString(ListSerializer(SyncApi.AppReport.serializer()), apps)
+        val rb = "{\"apps\":$body}".toRequestBody(jsonType)
+        call(request("/device/apps").put(rb).build()).close()
+    }
+
     override fun deleteProfile(profileId: String) {
         call(request("/sync/profiles/$profileId").delete().build()).close()
     }
