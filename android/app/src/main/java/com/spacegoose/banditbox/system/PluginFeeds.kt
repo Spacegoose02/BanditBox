@@ -99,7 +99,7 @@ class PluginFeeds(context: Context) {
      * Reads the feeds, then again whenever an app says they changed, until cancelled. Run it
      * while the launcher is in front.
      */
-    suspend fun watch() = coroutineScope {
+    suspend fun watch(): Nothing = coroutineScope {
         refresh()
         val changed = Channel<Unit>(Channel.CONFLATED)
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
