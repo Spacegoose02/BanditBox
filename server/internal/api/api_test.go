@@ -40,7 +40,7 @@ func newEnv(t *testing.T) *env {
 	}
 	au := auth.New(st)
 	backups := &backup.Manager{Dir: filepath.Join(t.TempDir(), "backups"), Store: st, Version: "test"}
-	srv := httptest.NewServer(NewHandler(Deps{Version: "test", Store: st, Auth: au, Pairing: pairing.New(st), Backups: backups}))
+	srv := httptest.NewServer(NewHandler(Deps{Version: "test", Store: st, Auth: au, Pairing: pairing.New(st), Backups: backups, APKDir: filepath.Join(t.TempDir(), "apks")}))
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	return &env{t: t, srv: srv, auth: au, c: &http.Client{Jar: jar}}

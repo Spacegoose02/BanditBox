@@ -126,7 +126,8 @@ func (s *Store) DeleteDevice(ctx context.Context, id string) error {
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	return nil
+	_, err = s.db.ExecContext(ctx, `DELETE FROM installs WHERE device_id = ?`, id)
+	return err
 }
 
 func nonNil(s []string) []string {

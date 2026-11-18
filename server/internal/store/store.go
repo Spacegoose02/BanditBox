@@ -111,6 +111,23 @@ var migrations = []string{
 	) STRICT;
 	ALTER TABLE profiles ADD COLUMN min_base INTEGER NOT NULL DEFAULT 0;`,
 	`ALTER TABLE devices ADD COLUMN apps TEXT NOT NULL DEFAULT '[]';`,
+	`CREATE TABLE apks (
+		sha256       TEXT PRIMARY KEY,
+		package      TEXT NOT NULL,
+		version_code INTEGER NOT NULL,
+		version_name TEXT NOT NULL DEFAULT '',
+		file_name    TEXT NOT NULL DEFAULT '',
+		size         INTEGER NOT NULL,
+		uploaded_at  INTEGER NOT NULL
+	) STRICT;
+	CREATE TABLE installs (
+		device_id  TEXT NOT NULL,
+		sha256     TEXT NOT NULL,
+		status     TEXT NOT NULL,
+		detail     TEXT NOT NULL DEFAULT '',
+		updated_at INTEGER NOT NULL,
+		PRIMARY KEY (device_id, sha256)
+	) STRICT;`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {

@@ -36,7 +36,9 @@ type Deps struct {
 	Pairing *pairing.Manager
 	Hub     *hub.Hub
 	Backups *backup.Manager
-	Log     *slog.Logger
+	// APKDir holds APKs uploaded to install on TVs.
+	APKDir string
+	Log    *slog.Logger
 }
 
 type server struct {
@@ -85,9 +87,16 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("PATCH /api/v1/devices/{id}", s.admin(s.updateDevice))
 	mux.HandleFunc("DELETE /api/v1/devices/{id}", s.admin(s.revokeDevice))
 	mux.HandleFunc("GET /api/v1/apps", s.admin(s.listApps))
+	mux.HandleFunc("GET /api/v1/apks", s.admin(s.listAPKs))
+	mux.HandleFunc("POST /api/v1/apks", s.admin(s.uploadAPK))
+	mux.HandleFunc("DELETE /api/v1/apks/{sha}", s.admin(s.deleteAPK))
+	mux.HandleFunc("POST /api/v1/apks/{sha}/install", s.admin(s.installAPK))
 
 	mux.HandleFunc("GET /api/v1/device/me", s.device(s.deviceMe))
 	mux.HandleFunc("PUT /api/v1/device/apps", s.device(s.deviceApps))
+	mux.HandleFunc("GET /api/v1/device/installs", s.device(s.deviceInstalls))
+	mux.HandleFunc("GET /api/v1/device/apks/{sha}", s.device(s.deviceAPK))
+	mux.HandleFunc("POST /api/v1/device/installs/{sha}", s.device(s.deviceReport))
 	mux.HandleFunc("GET /api/v1/sync/layout", s.device(s.syncLayout))
 	mux.HandleFunc("POST /api/v1/sync/ops", s.device(s.syncOps))
 	mux.HandleFunc("GET /api/v1/sync/stream", s.device(s.syncStream))
