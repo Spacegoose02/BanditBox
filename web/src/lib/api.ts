@@ -37,6 +37,18 @@ export interface PendingPairing {
 	expires: string;
 }
 
+export interface BackupEntry {
+	name: string;
+	size: number;
+	created: string;
+	profiles: number;
+}
+
+export interface RestoreResult {
+	profiles: number;
+	changed: number;
+}
+
 /** A layout document (schema/layout.schema.json). Kept loose: the editor works on plain JSON. */
 export type Layout = Record<string, unknown> & { profileId: string; version: number };
 
@@ -103,7 +115,15 @@ export const api = {
 	updateDevice: (id: string, patch: { name?: string; profiles?: string[] }) =>
 		request<Device>('PATCH', `/devices/${encodeURIComponent(id)}`, patch),
 	revokeDevice: (id: string) => request<void>('DELETE', `/devices/${encodeURIComponent(id)}`),
-	apps: () => request<KnownApp[]>('GET', '/apps')
+	apps: () => request<KnownApp[]>('GET', '/apps'),
+	pushProfile: (id: string) => request<void>('POST', `/profiles/${encodeURIComponent(id)}/push`),
+
+	backups: () => request<BackupEntry[]>('GET', '/backups'),
+	createBackup: () => request<BackupEntry>('POST', '/backups'),
+	restoreBackup: (name: string) =>
+		request<RestoreResult>('POST', `/backups/${encodeURIComponent(name)}/restore`),
+	restoreFile: (file: unknown) => request<RestoreResult>('POST', '/backups/restore', file),
+	backupUrl: (name: string) => `/api/v1/backups/${encodeURIComponent(name)}`
 };
 
 /** "3 minutes ago" style text for a timestamp. */

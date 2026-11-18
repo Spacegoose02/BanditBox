@@ -25,6 +25,12 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 | `PUT /profiles/{id}/layout` | the edited document; its `version` is the one it was edited from | 200 new document, or 409 `{error, current}` |
 | `GET /profiles/{id}/history` | | earlier documents, newest first (up to 50) |
 | `DELETE /profiles/{id}` | | 204. The last profile can't be deleted |
+| `POST /profiles/{id}/push` | | 204. Push to all TVs: changes TVs made before now and haven't sent yet are refused as stale, so every TV ends up with the server's copy |
+| `GET /backups` | | Saved backups, newest first: `[{name, size, created, profiles}]`. The server makes one a day when something changed and keeps 30 |
+| `POST /backups` | | 201, a new backup |
+| `GET /backups/{name}` | | The backup file (same format as a TV backup, `schema/backup.schema.json`) |
+| `POST /backups/{name}/restore` | | `{profiles, changed}`. Replaces every profile with the backup's (profiles not in it are deleted) after saving a backup of the current state. Restored profiles are pushed to all TVs |
+| `POST /backups/restore` | a backup file, from the server or a TV | Same as above; 422 if the file isn't a valid backup |
 | `GET /pair/pending` | | TVs waiting: `[{code, name, model, created, expires}]` |
 | `POST /pair/approve` | `{code, name?, profiles}` (`[]` = all profiles) | 201, the device |
 | `POST /pair/deny` | `{code}` | 204 |
