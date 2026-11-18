@@ -30,6 +30,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 The debug build installs as `com.spacegoose.banditbox.debug` and registers as a Home app. On a Shield, press Home and pick BanditBox. On Google TV (onn 4K) the stock launcher keeps Home: in BanditBox open Settings, then Home button, and turn on the BanditBox Home button service.
 
+Continue watching and app channel rows need permission to read TV listings. BanditBox asks for it on the home screen; if the prompt doesn't appear, run `adb shell pm grant com.spacegoose.banditbox.debug android.permission.READ_TV_LISTINGS`. See [docs/content-rows.md](docs/content-rows.md).
+
 Every pull request that touches `android/` builds a debug APK in CI, which you can download from the run's artifacts.
 
 #### RAM budget

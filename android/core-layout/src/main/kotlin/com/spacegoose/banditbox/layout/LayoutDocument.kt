@@ -83,12 +83,62 @@ sealed interface Row {
         val feed: String,
     ) : Row
 
+    /** Continue watching: the Android TV Watch Next list other apps publish. */
     @Serializable
     @SerialName("watchnext")
     data class WatchNext(
         override val id: String,
         override val title: String? = null,
-    ) : Row
+        val kinds: List<WatchNextKind> = DEFAULT_KINDS,
+        /** Only entries from these apps; null means every app. */
+        val apps: List<String>? = null,
+        override val limit: Int = ContentRow.DEFAULT_LIMIT,
+        override val size: TileSize = TileSize.MEDIUM,
+    ) : Row, ContentRow {
+        companion object {
+            val DEFAULT_KINDS = listOf(WatchNextKind.CONTINUE, WatchNextKind.NEXT)
+        }
+    }
+
+    /** One app's preview channel. [channel] is its name or internal provider id; null means the app's first channel. */
+    @Serializable
+    @SerialName("channel")
+    data class Channel(
+        override val id: String,
+        override val title: String? = null,
+        @SerialName("package") val packageName: String,
+        val channel: String? = null,
+        override val limit: Int = ContentRow.DEFAULT_LIMIT,
+        override val size: TileSize = TileSize.MEDIUM,
+    ) : Row, ContentRow
+}
+
+/** A row of cards that other apps publish (Watch Next, preview channels), not a row of app tiles. */
+sealed interface ContentRow {
+    val id: String
+    val title: String?
+    val limit: Int
+    val size: TileSize
+
+    companion object {
+        const val DEFAULT_LIMIT = 20
+        const val MAX_LIMIT = 50
+    }
+}
+
+@Serializable
+enum class WatchNextKind {
+    /** Started and not finished. */
+    @SerialName("continue") CONTINUE,
+
+    /** The next episode of something being watched. */
+    @SerialName("next") NEXT,
+
+    /** A new episode or season of something watched before. */
+    @SerialName("new") NEW,
+
+    /** Saved for later. */
+    @SerialName("watchlist") WATCHLIST,
 }
 
 @Serializable

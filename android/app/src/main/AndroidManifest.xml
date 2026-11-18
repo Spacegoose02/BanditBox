@@ -12,6 +12,9 @@
     <!-- Shows Ethernet / Wi-Fi / Offline in the top bar. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Posters on Continue watching and channel rows are often https links. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- To offer the system file picker for backups only on TVs that have one. -->
     <queries>
         <intent>

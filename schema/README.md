@@ -12,6 +12,7 @@ JSON Schemas (draft 2020-12) shared by the TV app and the server. They are the s
 ## Layout document notes (v1)
 
 - Row items are package names or `folder:<id>`.
+- `watchnext` and `channel` rows show what other apps publish to the Android TV home screen. See [docs/content-rows.md](../docs/content-rows.md).
 - `wallpaper` is content-addressed media on the server: `media:sha256-<hex>`.
 - `pin` is a hash, never the PIN itself.
 - `remap[].key` is an Android key name without `KEYCODE_` (for example `HOME`, `PROG_RED`), and `press` is `short`, `long` or `double`.

@@ -109,8 +109,49 @@ object LayoutEdits {
     fun removeRow(doc: LayoutDocument, rowId: String): LayoutDocument =
         if (doc.rows.none { it.id == rowId }) doc else doc.copy(rows = doc.rows.filter { it.id != rowId }).bumped()
 
-    fun renameRow(doc: LayoutDocument, rowId: String, title: String): LayoutDocument =
-        doc.editAppsRow(rowId) { it.copy(title = title.trim().ifEmpty { null }) }
+    /** Renames any kind of row. A blank name clears the title. */
+    fun renameRow(doc: LayoutDocument, rowId: String, title: String): LayoutDocument {
+        val clean = title.trim().ifEmpty { null }
+        return doc.editRow(rowId) { row ->
+            when (row) {
+                is Row.Apps -> row.copy(title = clean)
+                is Row.Widget -> row.copy(title = clean)
+                is Row.WatchNext -> row.copy(title = clean)
+                is Row.Channel -> row.copy(title = clean)
+            }
+        }
+    }
+
+    /** Adds a Continue watching (Watch Next) row at the end. Returns the new document and the row's id. */
+    fun addWatchNextRow(doc: LayoutDocument, title: String): Pair<LayoutDocument, String> {
+        val id = nextId("r", doc.rows.map { it.id })
+        val row = Row.WatchNext(id = id, title = title.trim().ifEmpty { null })
+        return doc.copy(rows = doc.rows + row).bumped() to id
+    }
+
+    /** Adds a row for one app's preview channel at the end. Returns the new document and the row's id. */
+    fun addChannelRow(doc: LayoutDocument, title: String, pkg: String, channel: String?): Pair<LayoutDocument, String> {
+        val id = nextId("r", doc.rows.map { it.id })
+        val row = Row.Channel(id = id, title = title.trim().ifEmpty { null }, packageName = pkg, channel = channel)
+        return doc.copy(rows = doc.rows + row).bumped() to id
+    }
+
+    /** Card size of a Watch Next or channel row. */
+    fun setContentSize(doc: LayoutDocument, rowId: String, size: TileSize): LayoutDocument =
+        doc.editRow(rowId) { row ->
+            when (row) {
+                is Row.WatchNext -> row.copy(size = size)
+                is Row.Channel -> row.copy(size = size)
+                else -> row
+            }
+        }
+
+    /** Which Watch Next entries a row shows. An empty list is ignored: a row always shows something. */
+    fun setWatchNextKinds(doc: LayoutDocument, rowId: String, kinds: List<WatchNextKind>): LayoutDocument {
+        val clean = kinds.distinct()
+        if (clean.isEmpty()) return doc
+        return doc.editRow(rowId) { row -> if (row is Row.WatchNext) row.copy(kinds = clean) else row }
+    }
 
     fun moveRow(doc: LayoutDocument, rowId: String, direction: Int): LayoutDocument {
         val from = doc.rows.indexOfFirst { it.id == rowId }
@@ -175,6 +216,14 @@ object LayoutEdits {
         if (!changed) return this
         val next = copy(rows = newRows)
         return if (bump) next.bumped() else next
+    }
+
+    private inline fun LayoutDocument.editRow(rowId: String, change: (Row) -> Row): LayoutDocument {
+        var changed = false
+        val newRows = rows.map { row ->
+            if (row.id == rowId) change(row).also { if (it != row) changed = true } else row
+        }
+        return if (changed) copy(rows = newRows).bumped() else this
     }
 
     private inline fun LayoutDocument.editFolder(folderId: String, change: (Folder) -> Folder): LayoutDocument {

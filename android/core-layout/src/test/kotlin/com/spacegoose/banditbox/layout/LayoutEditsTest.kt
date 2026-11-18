@@ -113,4 +113,27 @@ class LayoutEditsTest {
         assertEquals(listOf(Remap("HOME", Press.DOUBLE, Action.AllApps)), removed.remap)
         assertSame(removed, LayoutEdits.removeRemap(removed, "HOME", Press.LONG))
     }
+
+    @Test
+    fun contentRowsCanBeAddedRenamedAndConfigured() {
+        val (withWatchNext, w) = LayoutEdits.addWatchNextRow(base, "Continue watching")
+        val (doc, c) = LayoutEdits.addChannelRow(withWatchNext, " YouTube ", "com.google.android.youtube.tv", "Recommended")
+        assertEquals(listOf("favorites", "r1", "r2"), doc.rows.map { it.id })
+        assertEquals(7L, doc.version)
+        assertEquals(Row.Channel(id = c, title = "YouTube", packageName = "com.google.android.youtube.tv", channel = "Recommended"), doc.rows[2])
+
+        val renamed = LayoutEdits.renameRow(doc, w, "Up next")
+        assertEquals("Up next", renamed.rows[1].title)
+        assertEquals(null, LayoutEdits.renameRow(renamed, c, "  ").rows[2].title)
+
+        val sized = LayoutEdits.setContentSize(renamed, c, TileSize.LARGE)
+        assertEquals(TileSize.LARGE, (sized.rows[2] as Row.Channel).size)
+        assertSame(sized, LayoutEdits.setContentSize(sized, "favorites", TileSize.SMALL))
+
+        val all = WatchNextKind.entries.toList()
+        val kinds = LayoutEdits.setWatchNextKinds(sized, w, all)
+        assertEquals(all, (kinds.rows[1] as Row.WatchNext).kinds)
+        assertSame(kinds, LayoutEdits.setWatchNextKinds(kinds, w, emptyList()))
+        assertEquals(kinds, LayoutJson.decode(LayoutJson.encode(kinds)))
+    }
 }

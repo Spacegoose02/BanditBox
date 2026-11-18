@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "profileId": "p_living",
+  "version": 3,
+  "profile": { "name": "Living room" },
+  "rows": [
+    { "id": "favorites", "type": "apps", "title": "Favorites", "items": ["com.plexapp.android"] },
+    { "id": "r2", "type": "watchnext", "title": "Continue watching" },
+    { "id": "r3", "type": "watchnext", "title": "Up next in Plex", "kinds": ["next", "new"], "apps": ["com.plexapp.android"], "limit": 10, "size": "large" },
+    { "id": "r4", "type": "channel", "title": "YouTube", "package": "com.google.android.youtube.tv", "channel": "Recommended", "size": "small" },
+    { "id": "r5", "type": "channel", "package": "org.jellyfin.androidtv" },
+    { "id": "r6", "type": "widget", "feed": "bingebandit.continue-watching" }
+  ]
+}

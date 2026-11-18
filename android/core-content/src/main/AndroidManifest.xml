@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Lets BanditBox read the Watch Next list and preview channels other apps publish to the
+        system TvProvider. A runtime permission: the launcher asks for it the first time a
+        Continue watching or channel row is on screen, or it can be granted over ADB with
+        adb shell pm grant <package> android.permission.READ_TV_LISTINGS
+    -->
+    <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+
+    <!-- Android 11 package visibility: the TvProvider is another app's content provider. -->
+    <queries>
+        <provider android:authorities="android.media.tv" />
+    </queries>
+</manifest>
