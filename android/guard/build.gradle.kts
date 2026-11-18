@@ -22,5 +22,6 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":core-layout"))
     testImplementation(libs.junit)
 }

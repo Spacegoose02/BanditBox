@@ -10,6 +10,7 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.spacegoose.banditbox.apps.AppActions
 import com.spacegoose.banditbox.apps.AppEntry
@@ -19,6 +20,7 @@ import com.spacegoose.banditbox.apps.AppVisuals
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.ui.BanditBoxApp
 import com.spacegoose.banditbox.ui.LauncherDeps
+import com.spacegoose.banditbox.ui.ShowRequest
 import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
 import java.io.File
 
@@ -29,6 +31,8 @@ import java.io.File
 class HomeActivity : ComponentActivity() {
     private val visuals by lazy { AppVisuals(this) }
     private var homePresses by mutableIntStateOf(0)
+    private var request by mutableStateOf<ShowRequest?>(null)
+    private var requestCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,19 +53,28 @@ class HomeActivity : ComponentActivity() {
             freshBoot = freshBoot,
             launch = ::launchFirst,
             onAppAction = ::handle,
+            onRemapsChanged = { (application as BanditBoxApplication).updateRemaps(it) },
         )
+        if (savedInstanceState == null) request = showRequest(intent)
         setContent {
             BanditBoxTheme {
-                BanditBoxApp(deps = deps, homePresses = homePresses)
+                BanditBoxApp(deps = deps, homePresses = homePresses, request = request)
             }
         }
     }
 
-    /** Home pressed while BanditBox is already in front: back to the main screen. */
+    /**
+     * Home pressed while BanditBox is already in front: back to the main screen. A remote button
+     * shortcut can instead ask for a screen (All apps, Settings).
+     */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        homePresses++
+        val show = showRequest(intent)
+        if (show != null) request = show else homePresses++
     }
+
+    private fun showRequest(intent: Intent?): ShowRequest? =
+        intent?.getStringExtra(RemapActions.EXTRA_SHOW)?.let { ShowRequest(it, ++requestCount) }
 
     /** Opens the "Launch on boot" app. BanditBox stays underneath, so Home comes back here. */
     private fun launchOnBoot(packageName: String) {

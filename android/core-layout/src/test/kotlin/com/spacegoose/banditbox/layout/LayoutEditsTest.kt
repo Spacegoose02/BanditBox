@@ -87,4 +87,30 @@ class LayoutEditsTest {
         val (doc, _) = LayoutEdits.createFolder(base, "Sports", "a.two", "favorites")
         assertEquals(doc, LayoutJson.decode(LayoutJson.encode(doc)))
     }
+
+    @Test
+    fun setRemapReplacesTheSameKeyAndPress() {
+        val red = LayoutEdits.setRemap(base, "PROG_RED", Press.SHORT, Action.OpenApp("com.netflix.ninja"))
+        val redLong = LayoutEdits.setRemap(red, "PROG_RED", Press.LONG, Action.AllApps)
+        val changed = LayoutEdits.setRemap(redLong, "PROG_RED", Press.SHORT, Action.Home)
+        assertEquals(
+            listOf(Remap("PROG_RED", Press.SHORT, Action.Home), Remap("PROG_RED", Press.LONG, Action.AllApps)),
+            changed.remap,
+        )
+        assertEquals(8, changed.version)
+        assertSame(changed, LayoutEdits.setRemap(changed, "PROG_RED", Press.SHORT, Action.Home))
+    }
+
+    @Test
+    fun removeRemapLeavesOtherPresses() {
+        val doc = LayoutEdits.setRemap(
+            LayoutEdits.setRemap(base, "HOME", Press.LONG, Action.Settings),
+            "HOME",
+            Press.DOUBLE,
+            Action.AllApps,
+        )
+        val removed = LayoutEdits.removeRemap(doc, "HOME", Press.LONG)
+        assertEquals(listOf(Remap("HOME", Press.DOUBLE, Action.AllApps)), removed.remap)
+        assertSame(removed, LayoutEdits.removeRemap(removed, "HOME", Press.LONG))
+    }
 }

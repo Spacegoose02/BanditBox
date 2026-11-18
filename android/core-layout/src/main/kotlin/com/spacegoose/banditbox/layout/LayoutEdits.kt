@@ -138,6 +138,23 @@ object LayoutEdits {
     fun setAutoLogin(doc: LayoutDocument, on: Boolean): LayoutDocument =
         if (doc.profile.autoLogin == on) doc else doc.copy(profile = doc.profile.copy(autoLogin = on)).bumped()
 
+    // ---- Button remapping ----
+
+    /** Sets what [press] on [key] does, replacing any rule for the same key and press. */
+    fun setRemap(doc: LayoutDocument, key: String, press: Press, action: Action): LayoutDocument {
+        val existing = doc.remap.firstOrNull { it.key == key && it.press == press }
+        if (existing?.action == action) return doc
+        val rule = Remap(key, press, action)
+        val remap = if (existing == null) doc.remap + rule else doc.remap.map { if (it === existing) rule else it }
+        return doc.copy(remap = remap).bumped()
+    }
+
+    /** Gives [press] on [key] back its normal behaviour. */
+    fun removeRemap(doc: LayoutDocument, key: String, press: Press): LayoutDocument {
+        val kept = doc.remap.filterNot { it.key == key && it.press == press }
+        return if (kept.size == doc.remap.size) doc else doc.copy(remap = kept).bumped()
+    }
+
     // ---- Helpers ----
 
     private fun LayoutDocument.bumped() = copy(version = version + 1)
