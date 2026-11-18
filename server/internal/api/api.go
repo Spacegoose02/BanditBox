@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/spacegoose02/banditbox/server/internal/auth"
+	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
 )
 
@@ -29,6 +30,7 @@ type Deps struct {
 	Version string
 	Store   *store.Store
 	Auth    *auth.Auth
+	Pairing *pairing.Manager
 	Log     *slog.Logger
 }
 
@@ -57,6 +59,18 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("PUT /api/v1/profiles/{id}/layout", s.admin(s.putLayout))
 	mux.HandleFunc("GET /api/v1/profiles/{id}/history", s.admin(s.layoutHistory))
 	mux.HandleFunc("DELETE /api/v1/profiles/{id}", s.admin(s.deleteProfile))
+
+	mux.HandleFunc("POST /api/v1/pair/start", s.pairStart)
+	mux.HandleFunc("GET /api/v1/pair/{pairId}", s.pairWait)
+	mux.HandleFunc("GET /api/v1/pair/pending", s.admin(s.pairPending))
+	mux.HandleFunc("POST /api/v1/pair/approve", s.admin(s.pairApprove))
+	mux.HandleFunc("POST /api/v1/pair/deny", s.admin(s.pairDeny))
+
+	mux.HandleFunc("GET /api/v1/devices", s.admin(s.listDevices))
+	mux.HandleFunc("PATCH /api/v1/devices/{id}", s.admin(s.updateDevice))
+	mux.HandleFunc("DELETE /api/v1/devices/{id}", s.admin(s.revokeDevice))
+
+	mux.HandleFunc("GET /api/v1/device/me", s.device(s.deviceMe))
 
 	return sameOrigin(mux)
 }
