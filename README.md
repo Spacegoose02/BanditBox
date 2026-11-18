@@ -65,4 +65,6 @@ curl localhost:8686/api/v1/health
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `BANDITBOX_ADDR` | `:8686` | Listen address |
-| `BANDITBOX_DATA` | `/config` | Data folder (SQLite and media) |
+| `BANDITBOX_DATA` | `/config` | Data folder: `banditbox.db` (SQLite) and media |
+
+On first start the server creates the database and a **Home** profile (`p_default`, the same id the TV starts with). Layout documents are checked against `schema/layout.schema.json`, which is embedded in the binary: after changing a schema, run `go generate ./...` in `server/` (CI fails if the copy is out of date).

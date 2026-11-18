@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spacegoose02/banditbox/server/internal/api"
+	"github.com/spacegoose02/banditbox/server/internal/store"
 )
 
 // version is set at build time with -ldflags "-X main.version=...".
@@ -22,14 +23,25 @@ func main() {
 	dataDir := envOr("BANDITBOX_DATA", "/config")
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	st, err := store.Open(ctx, dataDir)
+	if err != nil {
+		log.Error("open database", "err", err)
+		os.Exit(1)
+	}
+	defer st.Close()
+	if err := st.EnsureDefaultProfile(ctx); err != nil {
+		log.Error("create default profile", "err", err)
+		os.Exit(1)
+	}
+
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           api.NewHandler(version),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		log.Info("banditbox listening", "addr", addr, "data", dataDir, "version", version)
