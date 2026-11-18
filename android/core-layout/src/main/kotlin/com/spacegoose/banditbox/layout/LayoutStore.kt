@@ -11,6 +11,17 @@ import java.nio.file.StandardCopyOption
  */
 class LayoutStore(private val dir: File) {
 
+    /** Told about every change, so sync can record it. Called on the saving thread, before it returns. */
+    interface Listener {
+        /** [after] was saved over [before] (null for a new profile). */
+        fun saved(before: LayoutDocument?, after: LayoutDocument)
+
+        fun deleted(profileId: String)
+    }
+
+    @Volatile
+    var listener: Listener? = null
+
     /** The saved document, or null if there is none or it can't be read. */
     fun load(profileId: String): LayoutDocument? {
         val file = fileFor(profileId)
@@ -28,6 +39,16 @@ class LayoutStore(private val dir: File) {
         load(profileId) ?: create().also(::save)
 
     fun save(doc: LayoutDocument) {
+        val l = listener
+        val before = if (l != null) load(doc.profileId) else null
+        write(doc)
+        l?.saved(before, doc)
+    }
+
+    /** Saves without telling the listener: for documents that came from the sync server. */
+    fun saveQuietly(doc: LayoutDocument) = write(doc)
+
+    private fun write(doc: LayoutDocument) {
         dir.mkdirs()
         val target = fileFor(doc.profileId)
         val tmp = File(dir, "${target.name}.tmp")
@@ -36,6 +57,11 @@ class LayoutStore(private val dir: File) {
     }
 
     fun delete(profileId: String) {
+        if (fileFor(profileId).delete()) listener?.deleted(profileId)
+    }
+
+    /** Deletes without telling the listener: for profiles the sync server removed. */
+    fun deleteQuietly(profileId: String) {
         fileFor(profileId).delete()
     }
 
