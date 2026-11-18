@@ -13,7 +13,9 @@ import com.spacegoose.banditbox.apps.menuFor
 import com.spacegoose.banditbox.layout.LayoutDocument
 import com.spacegoose.banditbox.layout.LayoutEdits
 import com.spacegoose.banditbox.layout.PinHash
+import com.spacegoose.banditbox.layout.Press
 import com.spacegoose.banditbox.layout.ProfileSummary
+import com.spacegoose.banditbox.layout.Remap
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
 import com.spacegoose.banditbox.system.SystemShortcuts
@@ -37,6 +39,16 @@ sealed interface Overlay {
     data object ProfileSettings : Overlay
     data object Inputs : Overlay
     data object HiddenApps : Overlay
+
+    // Remote button shortcuts, in the order the user goes through them.
+    data object Buttons : Overlay
+    data class ButtonRule(val rule: Remap) : Overlay
+    data object PickKey : Overlay
+    data object DetectKey : Overlay
+    data class PickPress(val key: String) : Overlay
+    data class PickAction(val key: String, val press: Press) : Overlay
+    data class PickApp(val key: String, val press: Press) : Overlay
+    data class PickInput(val key: String, val press: Press) : Overlay
 }
 
 /** What the profile dialogs can ask the launcher to do. */
@@ -108,6 +120,14 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
             onDismiss = close,
         )
         Overlay.HiddenApps -> HiddenAppsDialog(ctx)
+        Overlay.Buttons -> ButtonsDialog(ctx)
+        is Overlay.ButtonRule -> ButtonRuleDialog(overlay.rule, ctx)
+        Overlay.PickKey -> PickKeyDialog(ctx)
+        Overlay.DetectKey -> DetectKeyDialog(ctx)
+        is Overlay.PickPress -> PickPressDialog(overlay.key, ctx)
+        is Overlay.PickAction -> PickActionDialog(overlay.key, overlay.press, ctx)
+        is Overlay.PickApp -> PickAppDialog(overlay.key, overlay.press, ctx)
+        is Overlay.PickInput -> PickInputDialog(overlay.key, overlay.press, ctx)
     }
 }
 
@@ -226,6 +246,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
             Choice(stringResource(R.string.profile_settings, ctx.doc.profile.name)) { ctx.show(Overlay.ProfileSettings) },
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
+            Choice(stringResource(R.string.buttons)) { ctx.show(Overlay.Buttons) },
             Choice(stringResource(R.string.hidden_apps)) { ctx.show(Overlay.HiddenApps) },
             Choice(stringResource(R.string.android_settings)) { close(); ctx.deps.launch(SystemShortcuts.androidSettings) },
             Choice(stringResource(R.string.network_settings)) { close(); ctx.deps.launch(SystemShortcuts.network) },

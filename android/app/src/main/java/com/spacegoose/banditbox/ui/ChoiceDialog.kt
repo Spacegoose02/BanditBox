@@ -23,9 +23,12 @@ import androidx.tv.material3.Text
 
 class Choice(val label: String, val onPick: () -> Unit)
 
-/** A titled list of buttons. Focus starts on the first one; Back closes it; long lists scroll. */
+/**
+ * A titled list of buttons, with an optional [message] under the title. Focus starts on the
+ * first one; Back closes it; long lists scroll.
+ */
 @Composable
-fun ChoiceDialog(title: String, choices: List<Choice>, onDismiss: () -> Unit) {
+fun ChoiceDialog(title: String, choices: List<Choice>, onDismiss: () -> Unit, message: String? = null) {
     val first = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(360.dp)) {
@@ -40,6 +43,9 @@ fun ChoiceDialog(title: String, choices: List<Choice>, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
+                if (message != null) {
+                    Text(text = message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
+                }
                 choices.forEachIndexed { i, choice ->
                     Button(
                         onClick = choice.onPick,

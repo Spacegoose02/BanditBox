@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,6 +31,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.spacegoose.banditbox.DeviceSettings
 import com.spacegoose.banditbox.R
+import com.spacegoose.banditbox.RemapActions
 import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.apps.AppMenuAction
@@ -41,6 +43,7 @@ import com.spacegoose.banditbox.layout.LayoutResolver
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.layout.Profile
 import com.spacegoose.banditbox.layout.ProfileSummary
+import com.spacegoose.banditbox.layout.Remap
 import com.spacegoose.banditbox.layout.Profiles
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
@@ -72,7 +75,12 @@ class LauncherDeps(
     /** Start the first intent the device can handle. */
     val launch: (List<Intent>) -> Unit,
     val onAppAction: (AppEntry, AppMenuAction) -> Unit,
+    /** The open profile's remote button rules changed; the BanditBox service applies them. */
+    val onRemapsChanged: (List<Remap>) -> Unit,
 )
+
+/** A remote button shortcut asked for a screen. [id] tells two requests for the same screen apart. */
+data class ShowRequest(val screen: String, val id: Int)
 
 private enum class Screen { HOME, ALL_APPS, EDIT_ROWS, PICK_PROFILE, HOME_SETUP }
 
@@ -82,9 +90,10 @@ private class Moving(val rowId: String, val item: String, val label: String)
 /**
  * Root of the launcher UI. [homePresses] goes up each time Home is pressed while the
  * launcher is already open, which returns to the main screen and closes any dialog.
+ * [request] is the latest screen a remote button shortcut asked for.
  */
 @Composable
-fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
+fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val storeLock = remember { Mutex() }
@@ -216,6 +225,27 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
         openFolderId = null
         moving = null
     }
+    // A shortcut's screen opens once a profile is open (after the picker, at boot).
+    var handledRequest by remember { mutableIntStateOf(0) }
+    LaunchedEffect(request, profileId) {
+        val show = request ?: return@LaunchedEffect
+        if (profileId == null || show.id <= handledRequest) return@LaunchedEffect
+        handledRequest = show.id
+        overlay = null
+        openFolderId = null
+        moving = null
+        when (show.screen) {
+            RemapActions.SHOW_ALL_APPS -> screen = Screen.ALL_APPS
+            RemapActions.SHOW_SETTINGS -> {
+                screen = Screen.HOME
+                overlay = Overlay.Settings
+            }
+        }
+    }
+    // The BanditBox service follows the open profile's button rules.
+    val remaps = doc?.remap
+    LaunchedEffect(remaps) { remaps?.let(deps.onRemapsChanged) }
+
     BackHandler(enabled = screen != Screen.HOME && profileId != null) { screen = Screen.HOME }
     BackHandler(enabled = moving != null) { moving = null }
 
