@@ -20,5 +20,15 @@
         <intent>
             <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
         </intent>
+        <!-- Icon pack apps (ADW / Nova / GO format), for the theme's icon pack choice. -->
+        <intent>
+            <action android:name="org.adw.launcher.THEMES" />
+        </intent>
+        <intent>
+            <action android:name="com.novalauncher.THEME" />
+        </intent>
+        <intent>
+            <action android:name="com.gau.go.launcherex.theme" />
+        </intent>
     </queries>
 </manifest>

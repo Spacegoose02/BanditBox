@@ -52,6 +52,7 @@ sealed interface Overlay {
     data class PickInput(val key: String, val press: Press) : Overlay
 
     data object Backup : Overlay
+    data class Themes(val page: ThemePage) : Overlay
     class PickBackup(val sources: List<BackupSource>) : Overlay
     class Message(val title: String, val message: String) : Overlay
 }
@@ -91,6 +92,7 @@ class OverlayContext(
     val setLaunchOnBoot: (String?) -> Unit,
     val profile: ProfileActions,
     val backup: BackupActions,
+    val theme: ThemeActions,
 )
 
 @Composable
@@ -145,6 +147,7 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
         is Overlay.PickApp -> PickAppDialog(overlay.key, overlay.press, ctx)
         is Overlay.PickInput -> PickInputDialog(overlay.key, overlay.press, ctx)
         Overlay.Backup -> BackupDialog(ctx)
+        is Overlay.Themes -> ThemeDialog(overlay.page, ctx)
         is Overlay.PickBackup -> PickBackupDialog(overlay.sources, ctx)
         is Overlay.Message -> ChoiceDialog(
             title = overlay.title,
@@ -269,6 +272,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
         choices = listOf(
             Choice(stringResource(R.string.profile_settings, ctx.doc.profile.name)) { ctx.show(Overlay.ProfileSettings) },
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
+            Choice(stringResource(R.string.theme)) { ctx.show(Overlay.Themes(ThemePage.Main)) },
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
             Choice(stringResource(R.string.buttons)) { ctx.show(Overlay.Buttons) },
             Choice(stringResource(R.string.backup)) { ctx.show(Overlay.Backup) },

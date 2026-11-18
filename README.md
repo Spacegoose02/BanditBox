@@ -32,6 +32,18 @@ The debug build installs as `com.spacegoose.banditbox.debug` and registers as a 
 
 Every pull request that touches `android/` builds a debug APK in CI, which you can download from the run's artifacts.
 
+#### Themes
+
+Settings > Theme on the TV picks, per profile:
+
+- **Theme**: 14 presets in 7 styles (nuclear, laser, dark, kids dark, neon, cinematic, futuristic).
+- **Wallpaper**: the theme's own, a built-in pack (space, nature, ocean, future, sports, kids, cinema), or your own picture from a file or an https link. Pack wallpapers are drawn as vector art, so they cost almost no RAM; pictures are stored by SHA-256 like the server's media and drawn at 1280x720 (under 4 MB).
+- **Accent color**: the theme's, a fixed color, or one picked from the wallpaper.
+- **Icons**: each app's own, BanditBox uniform (every icon on the same plate), BanditBox mono (tinted with the accent), or an installed ADW/Nova icon pack app.
+- **Screensaver**: Android's own, or an OLED-safe one drawn by the launcher (drifting clock, star field, black) after 2 to 60 minutes without a button press.
+
+Everything is stored in the profile's layout document (`theme` in `schema/layout.schema.json`), and `schema/themes.json` lists the presets and packs for the web UI.
+
 #### RAM budget
 
 BanditBox must stay under 80 MB of memory (PSS) while idle on a 2 GB TV. The **RAM budget** workflow checks this on every push to `main`: it builds the minified release build, runs it on a 2 GB Android TV emulator, and fails if the median idle PSS is over budget. Its `ram-report` artifact holds the samples and the full `dumpsys meminfo`.

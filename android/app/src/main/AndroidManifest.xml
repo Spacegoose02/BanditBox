@@ -12,6 +12,9 @@
     <!-- Shows Ethernet / Wi-Fi / Offline in the top bar. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Downloads a wallpaper picture from a link the user types. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- To offer the system file picker for backups only on TVs that have one. -->
     <queries>
         <intent>
@@ -21,6 +24,10 @@
         <intent>
             <action android:name="android.intent.action.OPEN_DOCUMENT" />
             <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="image/*" />
         </intent>
     </queries>
 
