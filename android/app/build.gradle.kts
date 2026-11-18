@@ -82,6 +82,7 @@ dependencies {
     implementation(project(":core-layout"))
     implementation(project(":core-apps"))
     implementation(project(":guard"))
+    implementation(project(":core-content"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -89,6 +90,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.tv.material)
     implementation(libs.kotlinx.coroutines.android)
+    // Posters on Continue watching and channel rows. Coil because they come from https,
+    // content and android.resource URIs; its memory cache is capped in ui/Posters.kt.
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

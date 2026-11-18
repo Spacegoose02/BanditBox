@@ -70,4 +70,30 @@ class LayoutDocumentTest {
     fun rejectsUnknownRowType() {
         LayoutJson.decode(example("invalid/bad-row-type.json"))
     }
+
+    @Test
+    fun decodesContentRowsWithDefaults() {
+        val doc = LayoutJson.decode(example("content-rows.json"))
+
+        val continueWatching = doc.rows[1] as Row.WatchNext
+        assertEquals(listOf(WatchNextKind.CONTINUE, WatchNextKind.NEXT), continueWatching.kinds)
+        assertNull(continueWatching.apps)
+        assertEquals(ContentRow.DEFAULT_LIMIT, continueWatching.limit)
+        assertEquals(TileSize.MEDIUM, continueWatching.size)
+
+        val plex = doc.rows[2] as Row.WatchNext
+        assertEquals(listOf(WatchNextKind.NEXT, WatchNextKind.NEW), plex.kinds)
+        assertEquals(listOf("com.plexapp.android"), plex.apps)
+        assertEquals(10, plex.limit)
+        assertEquals(TileSize.LARGE, plex.size)
+
+        val youtube = doc.rows[3] as Row.Channel
+        assertEquals("com.google.android.youtube.tv", youtube.packageName)
+        assertEquals("Recommended", youtube.channel)
+        assertEquals(TileSize.SMALL, youtube.size)
+        assertNull((doc.rows[4] as Row.Channel).channel)
+
+        assertEquals(doc, LayoutJson.decode(LayoutJson.encode(doc)))
+        assertTrue(LayoutJson.encode(doc).contains("\"package\":\"org.jellyfin.androidtv\""))
+    }
 }

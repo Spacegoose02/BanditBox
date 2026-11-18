@@ -171,4 +171,20 @@
         <item quantity="one">%d app</item>
         <item quantity="other">%d apps</item>
     </plurals>
+
+    <!-- Continue watching and channel rows -->
+    <string name="continue_watching">Continue watching</string>
+    <string name="add_watch_next_row">Add Continue watching</string>
+    <string name="add_channel_row">Add app channel</string>
+    <string name="no_channels">No app has published a channel BanditBox can read yet. Open the app once (YouTube, Plex, Jellyfin…) and try again. On Google TV some apps only publish to Google\'s own home screen.</string>
+    <string name="content_allow_title">Show what you\'re watching</string>
+    <string name="content_allow_text">Press to let BanditBox read Continue watching and channels from your apps.</string>
+    <string name="content_denied">BanditBox can\'t read your apps\' rows yet. Allow it when asked, or grant it from a computer with:\n\nadb shell pm grant %1$s android.permission.READ_TV_LISTINGS</string>
+    <string name="kinds_in_progress">In progress</string>
+    <string name="kinds_with_new">+ New episodes</string>
+    <string name="kinds_everything">+ Watchlist</string>
+    <string name="row_kind_apps">Apps</string>
+    <string name="row_kind_watch_next">Continue watching</string>
+    <string name="row_kind_channel">App channel</string>
+    <string name="row_kind_widget">Widget (coming soon)</string>
 </resources>

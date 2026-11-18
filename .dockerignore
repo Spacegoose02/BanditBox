@@ -1,0 +1,10 @@
+# Only server/, schema/ and web/ go into the image.
+*
+!server/
+!schema/
+!web/
+server/bin/
+server/internal/webui/dist/
+web/node_modules/
+web/build/
+web/.svelte-kit/

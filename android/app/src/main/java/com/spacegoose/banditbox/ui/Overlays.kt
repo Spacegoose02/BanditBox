@@ -67,6 +67,9 @@ sealed interface Overlay {
     data object KidsServiceOff : Overlay
     class PickBackup(val sources: List<BackupSource>) : Overlay
     class Message(val title: String, val message: String) : Overlay
+
+    /** A list to pick from; picking closes it first. */
+    class Choices(val title: String, val choices: List<Choice>) : Overlay
 }
 
 /** Backup and restore, run by the launcher because restoring replaces every profile. */
@@ -122,6 +125,11 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
             title = overlay.title,
             initial = overlay.initial,
             onDone = { overlay.onDone(it); close() },
+            onDismiss = close,
+        )
+        is Overlay.Choices -> ChoiceDialog(
+            title = overlay.title,
+            choices = overlay.choices.map { choice -> Choice(choice.label) { close(); choice.onPick() } },
             onDismiss = close,
         )
         is Overlay.Confirm -> ChoiceDialog(

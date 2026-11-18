@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>BanditBox</Name>
+  <Repository>ghcr.io/spacegoose02/banditbox:latest</Repository>
+  <Registry>https://github.com/Spacegoose02/BanditBox/pkgs/container/banditbox</Registry>
+  <Network>host</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Spacegoose02/BanditBox/issues</Support>
+  <Project>https://github.com/Spacegoose02/BanditBox</Project>
+  <Overview>Master sync server for the BanditBox Android TV launcher. Edit every TV's profiles and layouts from a web UI; TVs keep working when the server is off. Lightweight: a single Go binary using about 20 MB of RAM.&#xD;
+&#xD;
+First start: open the container's log and copy the setup code, then open the WebUI and create the admin account.&#xD;
+&#xD;
+Network: "host" (the default here) lets TVs find the server automatically. With "bridge", TVs can still connect but you type the server's address on the TV. With br0 (a custom IP), discovery works too.</Overview>
+  <Category>HomeAutomation: MediaApp:Other Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8686]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Spacegoose02/BanditBox/main/deploy/unraid/banditbox.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Spacegoose02/BanditBox/main/deploy/unraid/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <Requires/>
+  <Config Name="WebUI port" Target="8686" Default="8686" Mode="tcp" Description="Port for the web UI and the TV API. With host networking, change BANDITBOX_ADDR instead." Type="Port" Display="always" Required="true" Mask="false">8686</Config>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/banditbox" Mode="rw" Description="Database, media and backups." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/banditbox</Config>
+  <Config Name="Listen address" Target="BANDITBOX_ADDR" Default=":8686" Mode="" Description="Address and port the server listens on inside the container." Type="Variable" Display="advanced" Required="false" Mask="false">:8686</Config>
+  <Config Name="Server name" Target="BANDITBOX_NAME" Default="BanditBox" Mode="" Description="Name TVs see when they find the server." Type="Variable" Display="advanced" Required="false" Mask="false">BanditBox</Config>
+  <Config Name="Advertise port" Target="BANDITBOX_ADVERTISE_PORT" Default="" Mode="" Description="Only for bridge networking with a different host port: the port TVs should use." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Discovery (mDNS)" Target="BANDITBOX_MDNS" Default="on|off" Mode="" Description="Advertise the server on the LAN as _banditbox._tcp." Type="Variable" Display="advanced" Required="false" Mask="false">on</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User that owns files in /config." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group that owns files in /config." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+</Container>

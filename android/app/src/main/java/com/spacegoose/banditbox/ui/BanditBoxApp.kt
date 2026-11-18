@@ -46,12 +46,17 @@ import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.content.ContentSelect
+import com.spacegoose.banditbox.content.ProgramLaunch
+import com.spacegoose.banditbox.content.TvProviderReader
+import com.spacegoose.banditbox.content.TvSnapshot
 import com.spacegoose.banditbox.guard.Guard
 import com.spacegoose.banditbox.guard.GuardStatus
 import com.spacegoose.banditbox.layout.Kids
 import com.spacegoose.banditbox.layout.KidsRules
 import com.spacegoose.banditbox.layout.KidsStatus
 import com.spacegoose.banditbox.layout.Backup
+import com.spacegoose.banditbox.layout.HomeRow
 import com.spacegoose.banditbox.layout.BackupFile
 import com.spacegoose.banditbox.layout.DefaultLayout
 import com.spacegoose.banditbox.layout.InvalidBackupException
@@ -103,6 +108,8 @@ class LauncherDeps(
     val visuals: AppVisuals,
     val store: LayoutStore,
     val settings: DeviceSettings,
+    /** Watch Next and preview channels other apps publish. */
+    val tv: TvProviderReader,
     /** True when the TV has just booted: auto sign-in or the profile picker applies. */
     val freshBoot: Boolean,
     /** Start the first intent the device can handle. */
@@ -127,10 +134,11 @@ private class Moving(val rowId: String, val item: String, val label: String)
 /**
  * Root of the launcher UI. [homePresses] goes up each time Home is pressed while the
  * launcher is already open, which returns to the main screen and closes any dialog.
- * [request] is the latest screen a remote button shortcut asked for.
+ * [request] is the latest screen a remote button shortcut asked for. [foreground] is true while
+ * the launcher is resumed; content rows only watch the TvProvider then.
  */
 @Composable
-fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
+fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, foreground: Boolean) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val storeLock = remember { Mutex() }
@@ -626,6 +634,79 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
         }
     }
 
+    // ---- Continue watching and channel rows ----
+    val homeRows = remember(currentDoc, byPackage) {
+        if (currentDoc == null) emptyList() else LayoutResolver.homeRows(currentDoc, byPackage.keys)
+    }
+    val contentAllowed: (String) -> Boolean = remember(currentDoc, byPackage) {
+        currentDoc?.let { LayoutResolver.contentAllowed(it, byPackage.keys) } ?: { false }
+    }
+    val needWatchNext = homeRows.any { it is HomeRow.Content && it.row is Row.WatchNext }
+    val needChannels = homeRows.any { it is HomeRow.Content && it.row is Row.Channel }
+    var tv by remember { mutableStateOf(TvSnapshot.NOT_GRANTED) }
+    var permissionAsked by remember { mutableIntStateOf(0) }
+    // Read only while in front and only the tables a row needs; a fresh read follows every change an app makes.
+    LaunchedEffect(foreground, needWatchNext, needChannels, permissionAsked) {
+        if (!foreground || !(needWatchNext || needChannels)) return@LaunchedEffect
+        deps.tv.snapshots(needWatchNext, needChannels).collect { tv = it }
+    }
+    val askTvPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        permissionAsked++
+        if (!granted) {
+            message(
+                context.getString(R.string.content_allow_title),
+                context.getString(R.string.content_denied, context.packageName),
+            )
+        }
+    }
+    fun allowTvListings() {
+        try {
+            askTvPermission.launch(TvProviderReader.PERMISSION)
+        } catch (_: ActivityNotFoundException) {
+            message(context.getString(R.string.content_allow_title), context.getString(R.string.content_denied, context.packageName))
+        }
+    }
+    val continueWatching = stringResource(R.string.continue_watching)
+    val contentState = remember(tv, contentAllowed, byPackage, continueWatching) {
+        ContentState(
+            tv = tv,
+            allowed = contentAllowed,
+            titleFor = { row ->
+                row.title ?: when (row) {
+                    is Row.WatchNext -> continueWatching
+                    is Row.Channel -> byPackage[row.packageName]?.label ?: row.channel ?: row.packageName
+                }
+            },
+            onOpen = { program -> deps.launch(ProgramLaunch.intents(program, context.packageManager)) },
+            onAllow = ::allowTvListings,
+        )
+    }
+
+    /** Lists the channels apps have published, to add one as a row. */
+    fun pickChannel() {
+        if (!deps.tv.hasPermission()) {
+            allowTvListings()
+            return
+        }
+        scope.launch {
+            val channels = withContext(Dispatchers.IO) { deps.tv.readChannels() }
+            val pickable = ContentSelect.pickable(channels, contentAllowed)
+            if (pickable.isEmpty()) {
+                message(context.getString(R.string.add_channel_row), context.getString(R.string.no_channels))
+                return@launch
+            }
+            val perApp = pickable.groupingBy { it.packageName }.eachCount()
+            overlay = Overlay.Choices(
+                title = context.getString(R.string.add_channel_row),
+                choices = pickable.map { channel ->
+                    val app = byPackage[channel.packageName]?.label ?: channel.packageName
+                    val label = if (perApp[channel.packageName] == 1) app else "$app: ${channel.displayName}"
+                    Choice(label) { edit { LayoutEdits.addChannelRow(it, label, channel.packageName, channel.ref).first } }
+                },
+            )
+        }
+    }
+
     val tileActions = remember(deps) {
         TileActions(
             onOpen = { deps.onAppAction(it, AppMenuAction.OPEN) },
@@ -714,9 +795,10 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
             // Nothing is drawn until the local layout is read, which takes milliseconds and never touches the network.
             when (screen) {
                 Screen.HOME, Screen.PICK_PROFILE -> HomeScreen(
-                    rows = rows,
+                    rows = homeRows,
                     apps = byPackage,
                     visuals = deps.visuals,
+                    content = contentState,
                     topBar = {
                         TopBar(
                             items = currentDoc.topBar,
@@ -730,7 +812,20 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
                     actions = tileActions,
                 )
                 Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
-                Screen.EDIT_ROWS -> RowEditor(currentDoc, edit, show = { overlay = it })
+                Screen.EDIT_ROWS -> RowEditor(
+                    doc = currentDoc,
+                    edit = edit,
+                    show = { overlay = it },
+                    rowLabel = { row ->
+                        when (row) {
+                            is Row.Apps -> null
+                            is Row.WatchNext -> continueWatching
+                            is Row.Channel -> contentState.titleFor(row)
+                            is Row.Widget -> row.feed
+                        }
+                    },
+                    onAddChannel = ::pickChannel,
+                )
                 Screen.HOME_SETUP -> HomeSetupScreen(launch = deps.launch)
             }
 
@@ -809,22 +904,34 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
 private const val KIDS_REFRESH_MS = 30_000L
 
 @Composable
-private fun RowEditor(doc: LayoutDocument, edit: ((LayoutDocument) -> LayoutDocument) -> Unit, show: (Overlay?) -> Unit) {
+private fun RowEditor(
+    doc: LayoutDocument,
+    edit: ((LayoutDocument) -> LayoutDocument) -> Unit,
+    show: (Overlay?) -> Unit,
+    rowLabel: (Row) -> String?,
+    onAddChannel: () -> Unit,
+) {
     val resources = LocalContext.current.resources
     val nameTitle = stringResource(R.string.row_name)
     val untitled = stringResource(R.string.row_untitled)
     val deleteLabel = stringResource(R.string.delete)
+    val continueWatching = stringResource(R.string.continue_watching)
     RowEditorScreen(
-        rows = doc.rows.filterIsInstance<Row.Apps>(),
+        rows = doc.rows,
+        rowLabel = rowLabel,
         actions = RowEditorActions(
             onAddRow = { show(Overlay.TextInput(nameTitle, "") { name -> edit { LayoutEdits.addRow(it, name).first } }) },
+            onAddWatchNext = { edit { LayoutEdits.addWatchNextRow(it, continueWatching).first } },
+            onAddChannel = onAddChannel,
             onRename = { row ->
                 show(Overlay.TextInput(nameTitle, row.title.orEmpty()) { name -> edit { LayoutEdits.renameRow(it, row.id, name) } })
             },
             onTile = { row, tile -> edit { LayoutEdits.setTile(it, row.id, tile) } },
+            onContentSize = { row, size -> edit { LayoutEdits.setContentSize(it, row.id, size) } },
+            onKinds = { row, kinds -> edit { LayoutEdits.setWatchNextKinds(it, row.id, kinds) } },
             onMove = { row, direction -> edit { LayoutEdits.moveRow(it, row.id, direction) } },
             onDelete = { row ->
-                val title = resources.getString(R.string.delete_row_confirm, row.title ?: untitled)
+                val title = resources.getString(R.string.delete_row_confirm, row.title ?: rowLabel(row) ?: untitled)
                 show(Overlay.Confirm(title, deleteLabel) { edit { LayoutEdits.removeRow(it, row.id) } })
             },
         ),

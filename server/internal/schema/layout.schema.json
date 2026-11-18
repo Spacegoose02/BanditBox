@@ -132,7 +132,7 @@
       "required": ["id", "type"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "type": { "type": "string", "enum": ["apps", "widget", "watchnext"] },
+        "type": { "type": "string", "enum": ["apps", "widget", "watchnext", "channel"] },
         "title": { "type": ["string", "null"], "maxLength": 60 }
       },
       "oneOf": [
@@ -155,14 +155,51 @@
           "additionalProperties": false
         },
         {
+          "description": "Continue watching: the Android TV Watch Next list that apps such as Plex, YouTube and Jellyfin publish.",
           "properties": {
             "id": true, "title": true,
-            "type": { "const": "watchnext" }
+            "type": { "const": "watchnext" },
+            "kinds": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "enum": ["continue", "next", "new", "watchlist"] },
+              "default": ["continue", "next"],
+              "description": "Which entries to show: continue (started), next (next episode), new (new episode or season), watchlist (saved for later)."
+            },
+            "apps": {
+              "type": ["array", "null"],
+              "items": { "$ref": "#/$defs/packageName" },
+              "uniqueItems": true,
+              "description": "Only entries from these apps. Null or missing means every app."
+            },
+            "limit": { "$ref": "#/$defs/contentLimit" },
+            "size": { "$ref": "#/$defs/contentSize" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "One app's preview channel: a row the app publishes for the Android TV home screen.",
+          "required": ["package"],
+          "properties": {
+            "id": true, "title": true,
+            "type": { "const": "channel" },
+            "package": { "$ref": "#/$defs/packageName" },
+            "channel": {
+              "type": ["string", "null"],
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "The channel's name as the app publishes it, or its internal provider id. Null or missing means the app's first channel."
+            },
+            "limit": { "$ref": "#/$defs/contentLimit" },
+            "size": { "$ref": "#/$defs/contentSize" }
           },
           "additionalProperties": false
         }
       ]
     },
+    "contentLimit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20, "description": "The most cards a content row shows." },
+    "contentSize": { "type": "string", "enum": ["small", "medium", "large"], "default": "medium", "description": "Card height on a content row." },
     "folder": {
       "type": "object",
       "required": ["id", "name"],

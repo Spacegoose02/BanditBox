@@ -12,7 +12,7 @@ See [docs/roadmap.md](docs/roadmap.md) and [docs/handoff.md](docs/handoff.md). T
 | `server/` | The master sync server: Go, single static binary, runs in Docker on Unraid |
 | `schema/` | JSON Schemas shared by both sides, the source of truth for the layout format |
 | `web/` | SvelteKit web UI, embedded in the server (Phase 2) |
-| `deploy/` | Dockerfile, compose file, Unraid template (Phase 2) |
+| `deploy/` | Dockerfile, compose file, Unraid template |
 | `docs/` | Roadmap, handoff, decision records |
 | `tools/` | Scripts, such as the RAM budget check |
 
@@ -29,6 +29,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 The debug build installs as `com.spacegoose.banditbox.debug` and registers as a Home app. On a Shield, press Home and pick BanditBox. On Google TV (onn 4K) the stock launcher keeps Home: in BanditBox open Settings, then Home button, and turn on the BanditBox Home button service.
+
+Continue watching and app channel rows need permission to read TV listings. BanditBox asks for it on the home screen; if the prompt doesn't appear, run `adb shell pm grant com.spacegoose.banditbox.debug android.permission.READ_TV_LISTINGS`. See [docs/content-rows.md](docs/content-rows.md).
 
 Every pull request that touches `android/` builds a debug APK in CI, which you can download from the run's artifacts.
 
@@ -65,6 +67,22 @@ Measure the release or ramcheck build: a debug build is much bigger and isn't re
 Pushing a tag like `v0.1.0` publishes a signed APK on GitHub Releases, after the RAM budget check passes. The one-time key setup and the steps are in [docs/releasing.md](docs/releasing.md).
 
 ### Server
+
+#### Docker / Unraid
+
+The image is `ghcr.io/spacegoose02/banditbox` (amd64 and arm64, about 23 MB, about 7 MB of RAM at idle). `:edge` follows `main`; `:latest` and `:X.Y.Z` come from release tags.
+
+- **Unraid:** until it's listed in Community Apps, add the template by hand from the Unraid terminal:
+  ```sh
+  wget -O /boot/config/plugins/dockerMan/templates-user/my-BanditBox.xml \
+    https://raw.githubusercontent.com/Spacegoose02/BanditBox/main/deploy/unraid/banditbox.xml
+  ```
+  Then Docker → Add Container → Template: **BanditBox** → Apply. Open the container's log for the setup code, then open the WebUI.
+- **Compose:** `deploy/docker-compose.yml`.
+- **Networking:** host networking (the template's default) lets TVs find the server by mDNS. With bridge networking TVs connect fine, but you type the server address on the TV.
+- **Files:** the container starts as root only to give `/config` to `PUID:PGID` (99:100 by default, Unraid's nobody:users), then switches to that user.
+
+#### From source
 
 Needs Go 1.24+.
 

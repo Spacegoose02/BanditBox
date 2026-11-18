@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -17,6 +18,11 @@ import androidx.tv.material3.Text
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.content.ContentSelect
+import com.spacegoose.banditbox.content.TvProgram
+import com.spacegoose.banditbox.content.TvSnapshot
+import com.spacegoose.banditbox.layout.ContentRow
+import com.spacegoose.banditbox.layout.HomeRow
 import com.spacegoose.banditbox.layout.ItemRef
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
@@ -36,19 +42,69 @@ class TileActions(
     val onFolderMenu: (ResolvedItem.FolderItem, String) -> Unit,
 )
 
+/** What Continue watching and channel rows need to draw. */
+class ContentState(
+    val tv: TvSnapshot,
+    /** Which apps' cards the open profile may show. */
+    val allowed: (String) -> Boolean,
+    /** The row's own title, or a default such as "Continue watching" or the app's name. */
+    val titleFor: (ContentRow) -> String,
+    val onOpen: (TvProgram) -> Unit,
+    /** Ask for permission to read TV listings. */
+    val onAllow: () -> Unit,
+)
+
+/** A row as drawn: app tiles, a content row's cards, or the card that asks for permission. */
+private sealed interface Drawn {
+    val key: String
+
+    class Apps(val row: ResolvedAppsRow) : Drawn {
+        override val key: String get() = row.id
+    }
+
+    class Cards(val row: ContentRow, val programs: List<TvProgram>) : Drawn {
+        override val key: String get() = row.id
+    }
+
+    class AskPermission(val row: ContentRow) : Drawn {
+        override val key: String get() = row.id
+    }
+}
+
+/**
+ * Content rows with nothing to show are skipped, like empty app rows. Until BanditBox may
+ * read TV listings, only the first content row is drawn, as a card asking for permission.
+ */
+private fun drawnRows(rows: List<HomeRow>, content: ContentState): List<Drawn> {
+    var asked = false
+    return rows.mapNotNull { row ->
+        when (row) {
+            is HomeRow.Apps -> Drawn.Apps(row.row)
+            is HomeRow.Content -> when {
+                !content.tv.granted -> if (asked) null else Drawn.AskPermission(row.row).also { asked = true }
+                else -> ContentSelect.cards(row.row, content.tv, content.allowed)
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { Drawn.Cards(row.row, it) }
+            }
+        }
+    }
+}
+
 /** The main screen: top bar, then the layout's rows. */
 @Composable
 fun HomeScreen(
-    rows: List<ResolvedAppsRow>,
+    rows: List<HomeRow>,
     apps: Map<String, AppEntry>,
     visuals: AppVisuals,
+    content: ContentState,
     topBar: @Composable () -> Unit,
     actions: TileActions,
     modifier: Modifier = Modifier,
 ) {
+    val drawn = remember(rows, content.tv, content.allowed) { drawnRows(rows, content) }
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
         topBar()
-        if (rows.isEmpty()) {
+        if (drawn.isEmpty()) {
             Text(
                 text = stringResource(R.string.empty_home),
                 style = MaterialTheme.typography.bodyLarge,
@@ -59,7 +115,13 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(top = 20.dp, bottom = 32.dp),
         ) {
-            items(rows, key = { it.id }) { row -> AppsRow(row, apps, visuals, actions) }
+            items(drawn, key = { it.key }) { row ->
+                when (row) {
+                    is Drawn.Apps -> AppsRow(row.row, apps, visuals, actions)
+                    is Drawn.Cards -> ContentRowView(content.titleFor(row.row), row.row.size, row.programs, content.onOpen)
+                    is Drawn.AskPermission -> ContentPermissionRow(content.titleFor(row.row), content.onAllow)
+                }
+            }
         }
     }
 }

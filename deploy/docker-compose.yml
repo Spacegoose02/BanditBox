@@ -1,0 +1,18 @@
+# BanditBox server. Start with:  docker compose -f deploy/docker-compose.yml up -d
+# Then read the setup code with: docker logs banditbox
+services:
+  banditbox:
+    image: ghcr.io/spacegoose02/banditbox:latest
+    container_name: banditbox
+    restart: unless-stopped
+    # Host networking lets TVs find the server by mDNS. Without it, remove this
+    # line, keep "ports", and type the server's address on the TV instead.
+    network_mode: host
+    # ports:
+    #   - "8686:8686"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - ./banditbox-config:/config

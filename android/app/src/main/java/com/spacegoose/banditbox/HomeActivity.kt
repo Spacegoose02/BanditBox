@@ -17,9 +17,11 @@ import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.content.TvProviderReader
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.ui.BanditBoxApp
 import com.spacegoose.banditbox.ui.LauncherDeps
+import com.spacegoose.banditbox.ui.Posters
 import com.spacegoose.banditbox.ui.ShowRequest
 import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
 import java.io.File
@@ -34,6 +36,7 @@ class HomeActivity : ComponentActivity() {
     private var request by mutableStateOf<ShowRequest?>(null)
     private var kidsMode by mutableStateOf(false)
     private var requestCount = 0
+    private var foreground by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +54,7 @@ class HomeActivity : ComponentActivity() {
             visuals = visuals,
             store = LayoutStore(File(filesDir, "layouts")),
             settings = settings,
+            tv = TvProviderReader(this),
             freshBoot = freshBoot,
             launch = ::launchFirst,
             onAppAction = ::handle,
@@ -61,9 +65,19 @@ class HomeActivity : ComponentActivity() {
         if (savedInstanceState == null) request = showRequest(intent)
         setContent {
             BanditBoxTheme(kids = kidsMode) {
-                BanditBoxApp(deps = deps, homePresses = homePresses, request = request)
+                BanditBoxApp(deps = deps, homePresses = homePresses, request = request, foreground = foreground)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        foreground = true
+    }
+
+    override fun onPause() {
+        foreground = false
+        super.onPause()
     }
 
     /**
@@ -112,5 +126,7 @@ class HomeActivity : ComponentActivity() {
             level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> visuals.trim(0f)
             level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> visuals.trim(0.5f)
         }
+        // Posters come back from the disk cache when the home screen is drawn again.
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) Posters.trim()
     }
 }
