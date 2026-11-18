@@ -93,6 +93,23 @@ var migrations = []string{
 		last_seen  INTEGER NOT NULL DEFAULT 0,
 		app_version TEXT NOT NULL DEFAULT ''
 	) STRICT;`,
+	`CREATE TABLE layout_changes (
+		profile_id TEXT NOT NULL,
+		version    INTEGER NOT NULL,
+		source     TEXT NOT NULL,
+		device_id  TEXT NOT NULL DEFAULT '',
+		path       TEXT NOT NULL,
+		hlc        TEXT NOT NULL DEFAULT ''
+	) STRICT;
+	CREATE INDEX layout_changes_by_version ON layout_changes (profile_id, version);
+	CREATE TABLE applied_ops (
+		op_id      TEXT PRIMARY KEY,
+		profile_id TEXT NOT NULL,
+		device_id  TEXT NOT NULL,
+		version    INTEGER NOT NULL,
+		applied_at INTEGER NOT NULL
+	) STRICT;
+	ALTER TABLE profiles ADD COLUMN min_base INTEGER NOT NULL DEFAULT 0;`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {
