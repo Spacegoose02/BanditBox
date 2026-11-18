@@ -71,6 +71,18 @@ var migrations = []string{
 		saved_at   INTEGER NOT NULL,
 		PRIMARY KEY (profile_id, version)
 	) STRICT;`,
+	`CREATE TABLE admins (
+		id         INTEGER PRIMARY KEY,
+		username   TEXT NOT NULL UNIQUE COLLATE NOCASE,
+		pw_hash    TEXT NOT NULL,
+		created_at INTEGER NOT NULL
+	) STRICT;
+	CREATE TABLE sessions (
+		token_hash BLOB PRIMARY KEY,
+		admin_id   INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+		created_at INTEGER NOT NULL,
+		expires_at INTEGER NOT NULL
+	) STRICT;`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {
