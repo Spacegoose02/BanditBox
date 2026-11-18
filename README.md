@@ -48,6 +48,10 @@ adb install -r app/build/outputs/apk/ramcheck/app-ramcheck.apk
 
 Measure the release or ramcheck build: a debug build is much bigger and isn't representative.
 
+#### Releases
+
+Pushing a tag like `v0.1.0` publishes a signed APK on GitHub Releases, after the RAM budget check passes. The one-time key setup and the steps are in [docs/releasing.md](docs/releasing.md).
+
 ### Server
 
 Needs Go 1.24+.
