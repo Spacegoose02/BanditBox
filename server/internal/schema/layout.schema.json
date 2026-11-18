@@ -37,6 +37,11 @@
       "type": "string",
       "pattern": "^media:sha256-[0-9a-f]{64}$"
     },
+    "packWallpaperRef": {
+      "description": "A built-in wallpaper, pack:<pack>/<wallpaper>, as listed in themes.json.",
+      "type": "string",
+      "pattern": "^pack:[a-z0-9-]{1,32}/[a-z0-9-]{1,32}$"
+    },
     "clockTime": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
     "profile": {
       "type": "object",
@@ -68,20 +73,44 @@
     },
     "theme": {
       "type": "object",
+      "description": "How the profile looks. Every field is optional: a missing one takes the preset's value. themes.json lists the presets and wallpaper packs.",
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "accent": { "$ref": "#/$defs/color" },
-        "wallpaper": { "anyOf": [{ "$ref": "#/$defs/mediaRef" }, { "type": "null" }] },
-        "iconPack": { "type": ["string", "null"] },
+        "id": { "$ref": "#/$defs/id", "description": "A preset from themes.json (nuclear, laser, dark, kids-dark, neon, cinematic, futuristic, or a variant such as neon-tokyo), or a custom theme's id. An unknown id draws the default preset with the fields below on top." },
+        "accent": { "anyOf": [{ "$ref": "#/$defs/color" }, { "type": "null" }], "description": "Replaces the preset's accent color." },
+        "adaptiveAccent": { "type": "boolean", "default": false, "description": "Take the accent from the wallpaper's colors. accent, or the preset's accent, is the fallback when the wallpaper has no strong color." },
+        "colors": { "anyOf": [{ "$ref": "#/$defs/themeColors" }, { "type": "null" }] },
+        "wallpaper": {
+          "description": "An uploaded picture (media:sha256-<hex>), a pack wallpaper (pack:<pack>/<wallpaper>), or none for the plain background. Null or missing uses the preset's wallpaper.",
+          "anyOf": [{ "$ref": "#/$defs/mediaRef" }, { "$ref": "#/$defs/packWallpaperRef" }, { "const": "none" }, { "type": "null" }]
+        },
+        "wallpaperDim": { "type": ["number", "null"], "minimum": 0, "maximum": 0.9, "description": "How much to darken the wallpaper so tiles stay readable; 0 is none. Null picks 0 for pack wallpapers and 0.45 for pictures." },
+        "iconPack": {
+          "description": "system draws each app's own icon. banditbox-uniform puts every icon on the same plate in the theme's colors; banditbox-mono also tints it with the accent. pkg:<package> uses an installed icon pack app (ADW/Nova format). Applies to icon tiles and to apps without a TV banner.",
+          "anyOf": [
+            { "type": "string", "pattern": "^(system|banditbox-uniform|banditbox-mono|pkg:[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+)$" },
+            { "type": "null" }
+          ]
+        },
         "screensaver": {
           "type": ["object", "null"],
           "required": ["type"],
           "additionalProperties": false,
           "properties": {
-            "type": { "type": "string", "enum": ["none", "system", "oled-drift"] }
+            "type": { "type": "string", "enum": ["none", "system", "oled-drift", "oled-starfield", "oled-black"], "description": "system leaves it to Android. The oled- types are drawn by the launcher on black with nothing held in place: oled-drift moves a dim clock every minute, oled-starfield is a slow star field, oled-black is plain black." },
+            "timeoutMin": { "type": "integer", "minimum": 1, "maximum": 120, "default": 10, "description": "Minutes without a button press on the launcher before the screensaver starts." }
           }
         }
+      }
+    },
+    "themeColors": {
+      "type": "object",
+      "description": "Overrides for the preset's colors, for custom themes made in the web UI.",
+      "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/$defs/color" },
+        "surface": { "$ref": "#/$defs/color" },
+        "text": { "$ref": "#/$defs/color" }
       }
     },
     "tile": {
