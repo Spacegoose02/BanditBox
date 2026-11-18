@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/spacegoose02/banditbox/server/internal/auth"
+	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
 )
 
@@ -36,7 +37,7 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	au := auth.New(st)
-	srv := httptest.NewServer(NewHandler(Deps{Version: "test", Store: st, Auth: au}))
+	srv := httptest.NewServer(NewHandler(Deps{Version: "test", Store: st, Auth: au, Pairing: pairing.New(st)}))
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	return &env{t: t, srv: srv, auth: au, c: &http.Client{Jar: jar}}
@@ -60,11 +61,16 @@ func (e *env) do(method, path string, body any, out any) int {
 	}
 	defer res.Body.Close()
 	if out != nil {
-		if err := json.NewDecoder(res.Body).Decode(out); err != nil {
-			e.t.Fatalf("%s %s: decode: %v", method, path, err)
-		}
+		decode(e.t, res, out)
 	}
 	return res.StatusCode
+}
+
+func decode(t *testing.T, res *http.Response, out any) {
+	t.Helper()
+	if err := json.NewDecoder(res.Body).Decode(out); err != nil {
+		t.Fatalf("%s %s: decode: %v", res.Request.Method, res.Request.URL.Path, err)
+	}
 }
 
 func (e *env) signIn() {
