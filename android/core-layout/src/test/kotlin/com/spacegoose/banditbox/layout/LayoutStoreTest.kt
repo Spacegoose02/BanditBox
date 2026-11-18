@@ -41,4 +41,28 @@ class LayoutStoreTest {
     fun rejectsPathLikeProfileIds() {
         LayoutStore(tmp.root).load("../escape")
     }
+
+    @Test
+    fun listenerHearsSavesAndDeletesButNotQuietOnes() {
+        val store = LayoutStore(tmp.root)
+        val heard = mutableListOf<String>()
+        store.listener = object : LayoutStore.Listener {
+            override fun saved(before: LayoutDocument?, after: LayoutDocument) {
+                heard += "saved ${after.profileId} over ${before?.profile?.name}"
+            }
+
+            override fun deleted(profileId: String) {
+                heard += "deleted $profileId"
+            }
+        }
+        val doc = DefaultLayout.create(emptyList())
+        store.save(doc)
+        store.save(doc.copy(profile = doc.profile.copy(name = "Den")))
+        store.saveQuietly(doc)
+        store.delete(DefaultLayout.PROFILE_ID)
+        store.delete(DefaultLayout.PROFILE_ID) // already gone: nothing to report
+        store.saveQuietly(doc)
+        store.deleteQuietly(DefaultLayout.PROFILE_ID)
+        assertEquals(listOf("saved p_default over null", "saved p_default over Home", "deleted p_default"), heard)
+    }
 }
