@@ -1,6 +1,10 @@
 package com.spacegoose.banditbox.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.apps.AppEntry
@@ -8,6 +12,8 @@ import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.menuFor
 import com.spacegoose.banditbox.layout.LayoutDocument
 import com.spacegoose.banditbox.layout.LayoutEdits
+import com.spacegoose.banditbox.layout.PinHash
+import com.spacegoose.banditbox.layout.ProfileSummary
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
 import com.spacegoose.banditbox.system.SystemShortcuts
@@ -21,22 +27,41 @@ sealed interface Overlay {
     data class PickFolder(val app: AppEntry, val fromRowId: String?) : Overlay
     class TextInput(val title: String, val initial: String, val onDone: (String) -> Unit) : Overlay
     class Confirm(val title: String, val confirmLabel: String, val onConfirm: () -> Unit) : Overlay
+
+    /** Ask for an existing PIN; [onSuccess] runs only when it matches [pinHash]. */
+    class PinEntry(val title: String, val pinHash: String, val onSuccess: () -> Unit) : Overlay
+
+    /** Ask for a new PIN twice; [onDone] gets the PIN's hash. */
+    class NewPin(val onDone: (String) -> Unit) : Overlay
     data object Settings : Overlay
+    data object ProfileSettings : Overlay
     data object Inputs : Overlay
     data object HiddenApps : Overlay
 }
+
+/** What the profile dialogs can ask the launcher to do. */
+class ProfileActions(
+    val showPicker: () -> Unit,
+    val add: (name: String) -> Unit,
+    val deleteCurrent: () -> Unit,
+    val setAutoLogin: (Boolean) -> Unit,
+)
 
 /** Everything the dialogs can read or do. */
 class OverlayContext(
     val doc: LayoutDocument,
     val apps: Map<String, AppEntry>,
     val inputs: List<TvInput>,
+    val profiles: List<ProfileSummary>,
+    val launchOnBoot: String?,
     val deps: LauncherDeps,
     val show: (Overlay?) -> Unit,
     val edit: ((LayoutDocument) -> LayoutDocument) -> Unit,
     val startMove: (rowId: String, item: String, label: String) -> Unit,
     val openFolder: (String) -> Unit,
     val openEditRows: () -> Unit,
+    val setLaunchOnBoot: (String?) -> Unit,
+    val profile: ProfileActions,
 )
 
 @Composable
@@ -61,7 +86,21 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
             ),
             onDismiss = close,
         )
+        is Overlay.PinEntry -> PinDialog(
+            title = overlay.title,
+            onPin = { pin ->
+                val ok = PinHash.verify(pin, overlay.pinHash)
+                if (ok) {
+                    close()
+                    overlay.onSuccess()
+                }
+                ok
+            },
+            onDismiss = close,
+        )
+        is Overlay.NewPin -> NewPinDialog(onDone = { hash -> close(); overlay.onDone(hash) }, onDismiss = close)
         Overlay.Settings -> SettingsDialog(ctx)
+        Overlay.ProfileSettings -> ProfileSettingsDialog(ctx)
         Overlay.Inputs -> ChoiceDialog(
             title = stringResource(R.string.inputs),
             choices = ctx.inputs.map { input -> Choice(input.label) { close(); ctx.deps.launch(listOf(input.intent())) } },
@@ -83,6 +122,8 @@ private fun AppMenuDialog(o: Overlay.AppMenu, ctx: OverlayContext) {
     val addToRow = stringResource(R.string.add_to_row)
     val addToFolder = stringResource(R.string.add_to_folder)
     val hide = stringResource(R.string.hide_app)
+    val isBootApp = ctx.launchOnBoot == pkg
+    val bootLabel = stringResource(if (isBootApp) R.string.launch_on_boot_off else R.string.launch_on_boot_on)
     val system = menuFor(app).filter { it != AppMenuAction.OPEN }.map { it to stringResource(it.labelRes()) }
 
     val choices = buildList {
@@ -103,6 +144,7 @@ private fun AppMenuDialog(o: Overlay.AppMenu, ctx: OverlayContext) {
             }
         }
         add(Choice(hide) { close(); ctx.edit { LayoutEdits.hide(it, pkg) } })
+        add(Choice(bootLabel) { close(); ctx.setLaunchOnBoot(if (isBootApp) null else pkg) })
         system.forEach { (action, label) -> add(Choice(label) { close(); ctx.deps.onAppAction(app, action) }) }
     }
     ChoiceDialog(title = app.label, choices = choices, onDismiss = close)
@@ -180,6 +222,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
     ChoiceDialog(
         title = stringResource(R.string.settings),
         choices = listOf(
+            Choice(stringResource(R.string.profile_settings, ctx.doc.profile.name)) { ctx.show(Overlay.ProfileSettings) },
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
             Choice(stringResource(R.string.hidden_apps)) { ctx.show(Overlay.HiddenApps) },
             Choice(stringResource(R.string.android_settings)) { close(); ctx.deps.launch(SystemShortcuts.androidSettings) },
@@ -187,6 +230,77 @@ private fun SettingsDialog(ctx: OverlayContext) {
             Choice(stringResource(R.string.install_unknown_apps)) { close(); ctx.deps.launch(SystemShortcuts.installUnknownApps) },
         ),
         onDismiss = close,
+    )
+}
+
+@Composable
+private fun ProfileSettingsDialog(ctx: OverlayContext) {
+    val close = { ctx.show(null) }
+    val profile = ctx.doc.profile
+    val pin = profile.pin
+    val nameTitle = stringResource(R.string.profile_name)
+    val currentPinTitle = stringResource(R.string.pin_current)
+    val deleteLabel = stringResource(R.string.delete_profile)
+    val deleteTitle = stringResource(R.string.delete_profile_confirm, profile.name)
+    val newProfileTitle = stringResource(R.string.new_profile_name)
+    val setNewPin = { ctx.show(Overlay.NewPin { hash -> ctx.edit { LayoutEdits.setPin(it, hash) } }) }
+
+    val choices = buildList {
+        add(Choice(stringResource(R.string.switch_profile)) { close(); ctx.profile.showPicker() })
+        add(
+            Choice(stringResource(R.string.rename_profile)) {
+                ctx.show(Overlay.TextInput(nameTitle, profile.name) { name -> ctx.edit { LayoutEdits.renameProfile(it, name) } })
+            },
+        )
+        if (pin == null) {
+            add(Choice(stringResource(R.string.pin_set)) { setNewPin() })
+        } else {
+            add(Choice(stringResource(R.string.pin_change)) { ctx.show(Overlay.PinEntry(currentPinTitle, pin) { setNewPin() }) })
+            add(
+                Choice(stringResource(R.string.pin_remove)) {
+                    ctx.show(Overlay.PinEntry(currentPinTitle, pin) { ctx.edit { LayoutEdits.setPin(it, null) } })
+                },
+            )
+        }
+        add(
+            Choice(stringResource(if (profile.autoLogin) R.string.auto_login_on else R.string.auto_login_off)) {
+                ctx.profile.setAutoLogin(!profile.autoLogin)
+            },
+        )
+        add(Choice(stringResource(R.string.add_profile)) { ctx.show(Overlay.TextInput(newProfileTitle, "") { ctx.profile.add(it) }) })
+        if (ctx.profiles.size > 1) {
+            add(Choice(deleteLabel) { ctx.show(Overlay.Confirm(deleteTitle, deleteLabel) { ctx.profile.deleteCurrent() }) })
+        }
+    }
+    ChoiceDialog(title = profile.name, choices = choices, onDismiss = close)
+}
+
+/** New PIN, then the same PIN again. A mismatch starts over. */
+@Composable
+private fun NewPinDialog(onDone: (String) -> Unit, onDismiss: () -> Unit) {
+    var first by remember { mutableStateOf<String?>(null) }
+    val enterTitle = stringResource(R.string.pin_new)
+    val confirmTitle = stringResource(R.string.pin_confirm)
+    PinDialog(
+        title = if (first == null) enterTitle else confirmTitle,
+        onPin = { pin ->
+            val firstPin = first
+            when {
+                firstPin == null -> {
+                    first = pin
+                    true
+                }
+                firstPin == pin -> {
+                    onDone(PinHash.hash(pin))
+                    true
+                }
+                else -> {
+                    first = null
+                    false
+                }
+            }
+        },
+        onDismiss = onDismiss,
     )
 }
 

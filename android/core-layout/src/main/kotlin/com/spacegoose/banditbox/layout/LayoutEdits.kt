@@ -123,6 +123,21 @@ object LayoutEdits {
     fun setTile(doc: LayoutDocument, rowId: String, tile: Tile): LayoutDocument =
         doc.editAppsRow(rowId) { it.copy(tile = tile) }
 
+    // ---- Profile ----
+
+    fun renameProfile(doc: LayoutDocument, name: String): LayoutDocument {
+        val clean = name.trim()
+        if (clean.isEmpty() || clean == doc.profile.name) return doc
+        return doc.copy(profile = doc.profile.copy(name = clean)).bumped()
+    }
+
+    /** [pinHash] from [PinHash.hash], or null to remove the lock. */
+    fun setPin(doc: LayoutDocument, pinHash: String?): LayoutDocument =
+        if (doc.profile.pin == pinHash) doc else doc.copy(profile = doc.profile.copy(pin = pinHash)).bumped()
+
+    fun setAutoLogin(doc: LayoutDocument, on: Boolean): LayoutDocument =
+        if (doc.profile.autoLogin == on) doc else doc.copy(profile = doc.profile.copy(autoLogin = on)).bumped()
+
     // ---- Helpers ----
 
     private fun LayoutDocument.bumped() = copy(version = version + 1)

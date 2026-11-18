@@ -35,6 +35,10 @@ class LayoutStore(private val dir: File) {
         Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
     }
 
+    fun delete(profileId: String) {
+        fileFor(profileId).delete()
+    }
+
     /** Ids of every saved profile. */
     fun profileIds(): List<String> =
         dir.listFiles { f -> f.isFile && f.name.endsWith(SUFFIX) }

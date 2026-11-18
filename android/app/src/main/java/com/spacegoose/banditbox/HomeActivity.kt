@@ -36,10 +36,17 @@ class HomeActivity : ComponentActivity() {
         // Screens inside the launcher (All apps) register their own Back handlers on top of this.
         onBackPressedDispatcher.addCallback(this) {}
 
+        val settings = DeviceSettings(this)
+        // Only the first creation can be a boot; a recreated activity (savedInstanceState) never is.
+        val freshBoot = savedInstanceState == null && settings.consumeFreshBoot()
+        if (freshBoot) settings.launchOnBoot?.let { pkg -> launchOnBoot(pkg) }
+
         val deps = LauncherDeps(
             index = AppIndex(this),
             visuals = visuals,
             store = LayoutStore(File(filesDir, "layouts")),
+            settings = settings,
+            freshBoot = freshBoot,
             launch = ::launchFirst,
             onAppAction = ::handle,
         )
@@ -54,6 +61,14 @@ class HomeActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         homePresses++
+    }
+
+    /** Opens the "Launch on boot" app. BanditBox stays underneath, so Home comes back here. */
+    private fun launchOnBoot(packageName: String) {
+        val intent = packageManager.getLeanbackLaunchIntentForPackage(packageName)
+            ?: packageManager.getLaunchIntentForPackage(packageName)
+            ?: return
+        launchFirst(listOf(intent))
     }
 
     private fun handle(app: AppEntry, action: AppMenuAction) {
