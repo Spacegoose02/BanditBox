@@ -197,6 +197,29 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
         }
     }
 
+    private var activitySent: TvActivity? = null
+
+    /** Tells the server what the TV is doing, when it changed since the last report that got through. */
+    fun reportActivity(a: TvActivity) {
+        scope.launch {
+            activityLock.withLock {
+                val s = states.load()
+                if (!s.signedIn || a == activitySent) return@withLock
+                try {
+                    api(s).reportActivity(a)
+                    activitySent = a
+                } catch (e: IOException) {
+                    Log.i("BanditBox", "Couldn't report activity: ${e.message}")
+                } catch (e: ServerException) {
+                    Log.i("BanditBox", "Server refused activity: ${e.message}")
+                } catch (_: RevokedException) {
+                }
+            }
+        }
+    }
+
+    private val activityLock = Mutex()
+
     /** PackageInstaller finished an install that [ApkInstaller] started. */
     fun installFinished(sha256: String, success: Boolean, detail: String) {
         installs.finished(sha256, success)

@@ -128,13 +128,14 @@ class GuardService : AccessibilityService() {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
+    private fun isLaunchable(pkg: String): Boolean = launchable.getOrPut(pkg) {
+        packageManager.getLeanbackLaunchIntentForPackage(pkg) != null ||
+            packageManager.getLaunchIntentForPackage(pkg) != null
+    }
+
     private fun kidsBlocks(pkg: String): Boolean {
         val policy = kids ?: return false
-        val isLaunchable = launchable.getOrPut(pkg) {
-            packageManager.getLeanbackLaunchIntentForPackage(pkg) != null ||
-                packageManager.getLaunchIntentForPackage(pkg) != null
-        }
-        return KidsGate.blocks(pkg, packageName, policy.kids.approvedApps.toSet(), kidsLocked, isLaunchable)
+        return KidsGate.blocks(pkg, packageName, policy.kids.approvedApps.toSet(), kidsLocked, isLaunchable(pkg))
     }
 
     private fun goHome() {
@@ -186,13 +187,14 @@ class GuardService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         val cls = event.className?.toString() ?: return
-        if (kids != null) {
-            val blocked = kidsBlocks(pkg) // also learns whether pkg is a real app
-            if (pkg == packageName || launchable[pkg] == true) foreground = pkg
-            if (blocked) {
-                goHome()
-                return
-            }
+        // Only real apps count as being in front, not keyboards, toasts or system dialogs.
+        if ((pkg == packageName || isLaunchable(pkg)) && pkg != foreground) {
+            foreground = pkg
+            Guard.onForeground?.invoke(pkg)
+        }
+        if (kids != null && kidsBlocks(pkg)) {
+            goHome()
+            return
         }
         val decide = override ?: return
         if (!decide.shouldRedirect(pkg, cls, SystemClock.uptimeMillis())) return

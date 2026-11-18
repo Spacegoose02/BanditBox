@@ -77,6 +77,18 @@ class HttpSyncApi(
         call(request("/device/installs/$sha256").post(rb).build()).close()
     }
 
+    /** What the TV is doing, for Home Assistant. */
+    fun reportActivity(a: TvActivity) {
+        val body = buildJsonObject {
+            put("app", a.app.take(255))
+            put("appLabel", a.appLabel.take(255))
+            put("playing", a.playing)
+            put("screenOn", a.screenOn)
+        }
+        val rb = json.encodeToString(JsonElement.serializer(), body).toRequestBody(jsonType)
+        call(request("/device/activity").post(rb).build()).close()
+    }
+
     /** Every widget feed from the server's connectors. */
     fun widgets(): WidgetSnapshot = call(request("/widgets").get().build()).use { res ->
         WidgetSnapshot.parse(res.body?.string() ?: throw IOException("empty reply"))

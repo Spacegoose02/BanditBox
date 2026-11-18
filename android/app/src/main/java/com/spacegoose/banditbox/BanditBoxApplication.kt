@@ -12,6 +12,7 @@ import com.spacegoose.banditbox.layout.KidsRules
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.layout.Remap
 import com.spacegoose.banditbox.sync.SyncController
+import com.spacegoose.banditbox.system.ActivityReporter
 import kotlinx.coroutines.sync.Mutex
 import java.io.File
 import java.io.IOException
@@ -28,7 +29,11 @@ class BanditBoxApplication : Application(), GuardHost {
     override fun onCreate() {
         super.onCreate()
         Guard.host = this
+        activity.start()
     }
+
+    /** Tells the sync server what the TV is doing, for Home Assistant. */
+    val activity by lazy { ActivityReporter(this) { sync.reportActivity(it) } }
 
     /** The one layout store the launcher writes to; sync records every save. */
     val layouts by lazy { LayoutStore(File(filesDir, "layouts")) }

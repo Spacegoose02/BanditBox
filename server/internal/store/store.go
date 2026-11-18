@@ -137,6 +137,10 @@ var migrations = []string{
 		secret     TEXT NOT NULL DEFAULT '',
 		created_at INTEGER NOT NULL
 	) STRICT;`,
+	`CREATE TABLE settings (
+		key   TEXT PRIMARY KEY,
+		value TEXT NOT NULL
+	) STRICT;`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {

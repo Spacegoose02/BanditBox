@@ -13,6 +13,7 @@ import (
 
 	"github.com/spacegoose02/banditbox/server/internal/auth"
 	"github.com/spacegoose02/banditbox/server/internal/backup"
+	"github.com/spacegoose02/banditbox/server/internal/homeassistant"
 	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
@@ -42,7 +43,9 @@ type Deps struct {
 	// Widgets runs the connectors; MediaDir holds the pictures they copied.
 	Widgets  *widgets.Manager
 	MediaDir string
-	Log      *slog.Logger
+	// HomeAssistant passes what the TVs are doing on to Home Assistant.
+	HomeAssistant *homeassistant.Bridge
+	Log           *slog.Logger
 }
 
 type server struct {
@@ -59,6 +62,9 @@ func NewHandler(d Deps) http.Handler {
 	}
 	if d.Widgets == nil {
 		d.Widgets = widgets.NewManager(d.Store, d.MediaDir, d.Hub, d.Log)
+	}
+	if d.HomeAssistant == nil {
+		d.HomeAssistant = homeassistant.New(d.Store, d.Log)
 	}
 	s := &server{d}
 	mux := http.NewServeMux()
@@ -107,6 +113,11 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("DELETE /api/v1/connectors/{id}", s.admin(s.deleteConnector))
 	mux.HandleFunc("POST /api/v1/connectors/{id}/refresh", s.admin(s.refreshConnector))
 	mux.HandleFunc("GET /api/v1/connectors/feeds", s.admin(s.adminWidgets))
+
+	mux.HandleFunc("GET /api/v1/homeassistant", s.admin(s.getHomeAssistant))
+	mux.HandleFunc("PUT /api/v1/homeassistant", s.admin(s.putHomeAssistant))
+	mux.HandleFunc("POST /api/v1/homeassistant/test", s.admin(s.testHomeAssistant))
+	mux.HandleFunc("POST /api/v1/device/activity", s.device(s.deviceActivity))
 
 	mux.HandleFunc("GET /api/v1/widgets", s.device(s.deviceWidgets))
 	mux.HandleFunc("GET /api/v1/media/{sha}", s.device(s.deviceMedia))

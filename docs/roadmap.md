@@ -88,7 +88,7 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 
 ## Phase 5: Extras
 
-- [ ] Home Assistant/MQTT hooks (for example, dim the lights when a movie starts)
+- [x] Home Assistant/MQTT hooks (for example, dim the lights when a movie starts): MQTT discovery and webhooks, see [homeassistant.md](homeassistant.md). Commands from Home Assistant to the TV are still to do
 - [x] One search across apps and integrations (apps, Continue watching and channel cards, widget cards, then an app's own search or the TV's)
 - [x] Sleep timer (screen-off still to be checked on the onn 4K and the Shield)
 - [ ] Ambient mode with photos from Immich or Plex
