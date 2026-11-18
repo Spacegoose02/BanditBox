@@ -36,6 +36,8 @@ jobs:
           api-level: 30
           target: android-tv
           arch: x86
+          # A 1080p TV screen: bitmap and window memory scale with it, so a phone-sized default would under-count.
+          profile: tv_1080p
           ram-size: 2048M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
