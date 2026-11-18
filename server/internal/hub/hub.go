@@ -21,9 +21,10 @@ type Sub struct {
 	// Ready gets a value when there is something to Take.
 	Ready chan struct{}
 
-	mu      sync.Mutex
-	pending map[string]int64
-	kicked  bool
+	mu       sync.Mutex
+	pending  map[string]int64
+	profiles bool
+	kicked   bool
 }
 
 // Subscribe adds a subscriber for a device.
@@ -56,6 +57,19 @@ func (h *Hub) Publish(profileID string, version int64) {
 	}
 }
 
+// ProfilesChanged announces that profiles were added or removed, or a device's
+// allowed profiles changed, so TVs should fetch their profile list again.
+func (h *Hub) ProfilesChanged() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for s := range h.subs {
+		s.mu.Lock()
+		s.profiles = true
+		s.mu.Unlock()
+		s.signal()
+	}
+}
+
 // Kick tells every subscriber of a device to disconnect, for example after it is revoked.
 func (h *Hub) Kick(deviceID string) {
 	h.mu.Lock()
@@ -77,13 +91,14 @@ func (h *Hub) Count() int {
 	return len(h.subs)
 }
 
-// Take returns and clears the pending versions, and whether the device was kicked.
-func (s *Sub) Take() (versions map[string]int64, kicked bool) {
+// Take returns and clears what is pending: new versions per profile, whether the
+// profile list changed, and whether the device was kicked.
+func (s *Sub) Take() (versions map[string]int64, profiles, kicked bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	v := s.pending
-	s.pending = map[string]int64{}
-	return v, s.kicked
+	v, p := s.pending, s.profiles
+	s.pending, s.profiles = map[string]int64{}, false
+	return v, p, s.kicked
 }
 
 func (s *Sub) signal() {

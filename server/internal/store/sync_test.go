@@ -172,3 +172,30 @@ func TestStaleAndFutureBase(t *testing.T) {
 		t.Fatalf("missing profile err = %v", err)
 	}
 }
+
+func TestSeed(t *testing.T) {
+	ctx := context.Background()
+	s := syncFixture(t)
+	if fresh, _ := s.Fresh(ctx); !fresh {
+		t.Fatal("new server not fresh")
+	}
+	docs := []json.RawMessage{
+		json.RawMessage(`{"schema":1,"profileId":"p_default","version":7,"profile":{"name":"Living room"},"rows":[]}`),
+		json.RawMessage(`{"schema":1,"profileId":"p_kids","version":3,"profile":{"name":"Kids"},"rows":[]}`),
+	}
+	got, err := s.Seed(ctx, docs)
+	if err != nil || len(got) != 2 || got[0].Version != 1 {
+		t.Fatalf("seed %+v %v", got, err)
+	}
+	list, _ := s.ListProfiles(ctx)
+	if len(list) != 2 || list[0].Name != "Living room" {
+		t.Fatalf("list %+v", list)
+	}
+	if _, err := s.Seed(ctx, docs); !errors.Is(err, ErrNotFresh) {
+		t.Fatalf("second seed err = %v", err)
+	}
+	var ve *ValidationError
+	if _, err := open(t).Seed(ctx, []json.RawMessage{docs[0], docs[0]}); !errors.As(err, &ve) {
+		t.Fatalf("repeated id err = %v", err)
+	}
+}

@@ -127,3 +127,69 @@ func TestSyncStream(t *testing.T) {
 		t.Fatalf("after revoke err = %v", err)
 	}
 }
+
+func (e *env) tvDelete(path, token string) int {
+	e.t.Helper()
+	req, _ := http.NewRequest("DELETE", e.srv.URL+path, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	res.Body.Close()
+	return res.StatusCode
+}
+
+func TestTVSeedsAndManagesProfiles(t *testing.T) {
+	e := newEnv(t)
+	e.signIn()
+	token, _ := e.pairTV(nil)
+
+	var me struct{ Fresh bool }
+	e.tvGet("/api/v1/device/me", token, &me)
+	if !me.Fresh {
+		t.Fatal("new server not fresh")
+	}
+	seed := seedRequest{Layouts: []json.RawMessage{
+		raw(`{"schema":1,"profileId":"p_default","version":4,"profile":{"name":"Den"},"rows":[]}`),
+		raw(`{"schema":1,"profileId":"p_kids","version":2,"profile":{"name":"Kids"},"rows":[]}`),
+	}}
+	var seeded []layoutResponse
+	if c := e.tvPost("/api/v1/sync/seed", token, seed, &seeded); c != 200 || len(seeded) != 2 {
+		t.Fatalf("seed = %d %+v", c, seeded)
+	}
+	if c := e.tvPost("/api/v1/sync/seed", token, seed, nil); c != 409 {
+		t.Fatalf("second seed = %d", c)
+	}
+
+	var created layoutResponse
+	c := e.tvPost("/api/v1/sync/profiles", token, raw(`{"schema":1,"profileId":"p_guest","version":0,"profile":{"name":"Guest"},"rows":[]}`), &created)
+	if c != 201 || created.Version != 0 {
+		t.Fatalf("create = %d %+v", c, created)
+	}
+	if c := e.tvDelete("/api/v1/sync/profiles/p_guest", token); c != 204 {
+		t.Fatalf("delete = %d", c)
+	}
+
+	// A TV limited to some profiles can't seed, and its new profiles join its list.
+	limited, id := e.pairTV([]string{"p_kids"})
+	if c := e.tvPost("/api/v1/sync/seed", limited, seed, nil); c != 403 {
+		t.Fatalf("limited seed = %d", c)
+	}
+	e.tvPost("/api/v1/sync/profiles", limited, raw(`{"schema":1,"profileId":"p_den2","version":0,"profile":{"name":"Den 2"},"rows":[]}`), nil)
+	var d store.Device
+	e.do("GET", "/api/v1/devices", nil, nil)
+	var devices []store.Device
+	e.do("GET", "/api/v1/devices", nil, &devices)
+	for _, x := range devices {
+		if x.ID == id {
+			d = x
+		}
+	}
+	if len(d.Profiles) != 2 {
+		t.Fatalf("limited TV profiles %v", d.Profiles)
+	}
+	if c := e.tvDelete("/api/v1/sync/profiles/p_default", limited); c != 403 {
+		t.Fatalf("delete not allowed = %d", c)
+	}
+}
