@@ -5,7 +5,10 @@ import android.content.Context
 import android.util.Log
 import com.spacegoose.banditbox.guard.Guard
 import com.spacegoose.banditbox.guard.GuardHost
+import com.spacegoose.banditbox.kids.KidsDevice
 import com.spacegoose.banditbox.layout.Action
+import com.spacegoose.banditbox.layout.KidsPolicy
+import com.spacegoose.banditbox.layout.KidsRules
 import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.layout.Remap
 import java.io.File
@@ -27,6 +30,20 @@ class BanditBoxApplication : Application(), GuardHost {
 
     override fun remaps(): List<Remap> = remaps ?: readRemaps().also { remaps = it }
 
+    val kidsDevice by lazy { KidsDevice(this) }
+
+    /** The open profile's kids rules, read fresh from disk so the service never acts on stale limits. */
+    override fun kidsPolicy(): KidsPolicy? {
+        val id = DeviceSettings(this).currentProfileId ?: return null
+        val kids = try {
+            LayoutStore(File(filesDir, "layouts")).load(id)?.profile?.kids
+        } catch (e: IOException) {
+            Log.w("BanditBox", "Couldn't read kids rules", e)
+            null
+        } ?: return null
+        return kidsDevice.policy(id, kids)
+    }
+
     /** Called by the launcher whenever the open profile or its rules change. */
     fun updateRemaps(latest: List<Remap>) {
         if (latest == remaps) return
@@ -39,7 +56,7 @@ class BanditBoxApplication : Application(), GuardHost {
     private fun readRemaps(): List<Remap> {
         val id = DeviceSettings(this).currentProfileId ?: return emptyList()
         return try {
-            LayoutStore(File(filesDir, "layouts")).load(id)?.remap.orEmpty()
+            LayoutStore(File(filesDir, "layouts")).load(id)?.let(KidsRules::allowedRemaps).orEmpty()
         } catch (e: IOException) {
             Log.w("BanditBox", "Couldn't read button rules", e)
             emptyList()

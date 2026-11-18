@@ -23,4 +23,26 @@ object DefaultLayout {
             ),
             topBar = TOP_BAR,
         )
+
+    const val KIDS_ROW_ID = "kids"
+
+    /** Kids top bar: no inputs or network, which lead out of the launcher. */
+    val KIDS_TOP_BAR = listOf("clock", "profile", "settings")
+
+    /** A kids profile: one big row of its approved apps, the kids theme, and the parent PIN. */
+    fun createKids(profileId: String, name: String, approvedApps: List<String>, parentPin: String?): LayoutDocument =
+        LayoutDocument(
+            profileId = profileId,
+            profile = Profile(name = name, kids = Kids(parentPin = parentPin, approvedApps = approvedApps.distinct())),
+            theme = Theme(id = LayoutEdits.KIDS_THEME_ID),
+            rows = listOf(
+                Row.Apps(
+                    id = KIDS_ROW_ID,
+                    title = null,
+                    tile = Tile(size = TileSize.LARGE, style = TileStyle.BANNER, shape = TileShape.ROUNDED),
+                    items = approvedApps.distinct(),
+                ),
+            ),
+            topBar = KIDS_TOP_BAR,
+        )
 }
