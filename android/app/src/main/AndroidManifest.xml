@@ -24,6 +24,9 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Installs APKs sent from the server (Apps in the web UI), including BanditBox updates. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- To offer the system file picker for backups only on TVs that have one. -->
     <queries>
         <intent>
@@ -74,5 +77,10 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Results of installs started by sync/ApkInstaller. -->
+        <receiver
+            android:name=".sync.InstallReceiver"
+            android:exported="false" />
     </application>
 </manifest>

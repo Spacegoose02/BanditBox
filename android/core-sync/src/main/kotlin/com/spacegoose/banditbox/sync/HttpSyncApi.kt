@@ -16,6 +16,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -55,6 +56,27 @@ class HttpSyncApi(
         call(request("/device/apps").put(rb).build()).close()
     }
 
+    /** APKs the server sent this TV, oldest first. */
+    fun installs(): List<SyncApi.PendingApk> = get("/device/installs", ListSerializer(SyncApi.PendingApk.serializer()))
+
+    /** Downloads an APK this TV was sent into [dest]. */
+    fun downloadApk(sha256: String, dest: File) {
+        call(request("/device/apks/$sha256").get().build()).use { res ->
+            val body = res.body ?: throw IOException("empty reply")
+            dest.outputStream().use { out -> body.byteStream().copyTo(out) }
+        }
+    }
+
+    /** Tells the server what happened to an APK: waiting, installed, skipped or failed. */
+    fun reportInstall(sha256: String, status: String, detail: String = "") {
+        val body = buildJsonObject {
+            put("status", status)
+            put("detail", detail.take(500))
+        }
+        val rb = json.encodeToString(JsonElement.serializer(), body).toRequestBody(jsonType)
+        call(request("/device/installs/$sha256").post(rb).build()).close()
+    }
+
     override fun deleteProfile(profileId: String) {
         call(request("/sync/profiles/$profileId").delete().build()).close()
     }
@@ -63,7 +85,12 @@ class HttpSyncApi(
      * Opens the live stream while the launcher is in front. [onVersion] gets (profileId, version);
      * [onProfiles] means the profile list changed. Close the returned socket when the launcher leaves.
      */
-    fun stream(onVersion: (String, Long) -> Unit, onProfiles: () -> Unit, onClosed: (revoked: Boolean) -> Unit): WebSocket {
+    fun stream(
+        onVersion: (String, Long) -> Unit,
+        onProfiles: () -> Unit,
+        onClosed: (revoked: Boolean) -> Unit,
+        onInstalls: () -> Unit = {},
+    ): WebSocket {
         val req = request("/sync/stream").build()
         return streamClient.newWebSocket(req, object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -75,6 +102,7 @@ class HttpSyncApi(
                         onVersion(id, v)
                     }
                     "profiles" -> onProfiles()
+                    "installs" -> onInstalls()
                 }
             }
 

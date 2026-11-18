@@ -43,6 +43,16 @@ interface SyncApi {
     @Serializable
     data class AppReport(val packageName: String, val label: String, val tv: Boolean)
 
+    /** An APK the server sent this TV to install. */
+    @Serializable
+    data class PendingApk(
+        val sha256: String,
+        @SerialName("package") val packageName: String,
+        val versionCode: Long,
+        val versionName: String = "",
+        val size: Long = 0,
+    )
+
     @Serializable
     data class PairResult(val status: String, val deviceId: String? = null, val token: String? = null)
 }

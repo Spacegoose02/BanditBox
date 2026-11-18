@@ -52,8 +52,8 @@ The aim is a fast, ad-free launcher you'd actually use every day.
 - [x] Push a profile to all TVs, and choose which profiles each TV gets
 - Per-device overrides: deferred (decided 2026-11-18), since choosing profiles per TV covers it for now
 - [x] Server-side backups: daily snapshots and restore
-- [ ] Self-update: the launcher installs new versions from the server
-- [ ] Push an APK from the browser to chosen TVs
+- [x] Self-update: the launcher installs new versions from the server
+- [x] Push an APK from the browser to chosen TVs
 - [ ] Import from Projectivy
 
 **Gate 2:** A change in the web UI shows up on the TV, and the TV still works with the server off.
