@@ -124,7 +124,9 @@ func (s *server) syncOps(w http.ResponseWriter, r *http.Request, d store.Device)
 
 // streamMessage is sent over the sync WebSocket.
 type streamMessage struct {
-	Type      string `json:"type"` // "version"; "profiles": fetch /device/me again; "installs": fetch /device/installs
+	// "version"; "profiles": fetch /device/me again; "installs": fetch /device/installs;
+	// "widgets": the widget feeds are at Version, fetch /widgets if behind.
+	Type      string `json:"type"`
 	ProfileID string `json:"profileId,omitempty"`
 	Version   int64  `json:"version,omitempty"`
 }
@@ -158,6 +160,11 @@ func (s *server) syncStream(w http.ResponseWriter, r *http.Request, d store.Devi
 		}
 	}
 
+	wv, _ := s.Widgets.Feeds()
+	if err := send(ctx, conn, streamMessage{Type: "widgets", Version: wv}); err != nil {
+		return
+	}
+
 	ping := time.NewTicker(pingEvery)
 	defer ping.Stop()
 	for {
@@ -185,6 +192,11 @@ func (s *server) syncStream(w http.ResponseWriter, r *http.Request, d store.Devi
 			}
 			if profilesChanged {
 				if err := send(ctx, conn, streamMessage{Type: "profiles"}); err != nil {
+					return
+				}
+			}
+			if v := sub.TakeWidgets(); v > 0 {
+				if err := send(ctx, conn, streamMessage{Type: "widgets", Version: v}); err != nil {
 					return
 				}
 			}

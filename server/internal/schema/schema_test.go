@@ -58,8 +58,28 @@ func TestOpExamples(t *testing.T) {
 	check("../../../schema/examples/ops/invalid/*.json", false)
 }
 
+func TestFeedExamples(t *testing.T) {
+	check := func(glob string, wantValid bool) {
+		files, _ := filepath.Glob(glob)
+		if len(files) == 0 {
+			t.Fatalf("no files for %s", glob)
+		}
+		for _, f := range files {
+			raw, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateFeed(raw); (err == nil) != wantValid {
+				t.Errorf("%s: valid=%v, err=%v", f, wantValid, err)
+			}
+		}
+	}
+	check("../../../schema/examples/widget-feed/*.json", true)
+	check("../../../schema/examples/widget-feed/invalid/*.json", false)
+}
+
 func TestEmbeddedCopiesMatchSource(t *testing.T) {
-	for name, embedded := range map[string][]byte{"layout.schema.json": layoutSchema, "op.schema.json": opSchema} {
+	for name, embedded := range map[string][]byte{"layout.schema.json": layoutSchema, "op.schema.json": opSchema, "widget-feed.schema.json": feedSchema} {
 		src, err := os.ReadFile("../../../schema/" + name)
 		if err != nil {
 			t.Fatal(err)

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "id": "weatherscout.now",
+  "name": "Weather Scout",
+  "template": "weather",
+  "sizes": ["1x1", "2x1", "4x2"],
+  "refreshSec": 600,
+  "kidsSafe": true,
+  "updatedAt": "2026-11-18T03:00:00Z",
+  "cards": [
+    {
+      "id": "now",
+      "title": "Richmond, VA",
+      "subtitle": "Rain in 15 min",
+      "weather": {
+        "temp": 52, "unit": "°F", "icon": "rain", "isDay": true, "label": "Rain",
+        "high": 60, "low": 42, "precipChance": 80, "alert": "Wind Advisory",
+        "days": [
+          { "day": "Wed", "icon": "rain", "high": 60, "low": 42, "precipChance": 80 },
+          { "day": "Thu", "icon": "partly-cloudy", "high": 58, "low": 39 }
+        ]
+      }
+    }
+  ]
+}

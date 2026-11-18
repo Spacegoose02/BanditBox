@@ -108,6 +108,10 @@ func TestSyncStream(t *testing.T) {
 	if err := wsjson.Read(ctx, conn, &m); err != nil || m.ProfileID != "p_default" || m.Version != 0 {
 		t.Fatalf("hello %+v %v", m, err)
 	}
+	m = streamMessage{}
+	if err := wsjson.Read(ctx, conn, &m); err != nil || m.Type != "widgets" || m.Version == 0 {
+		t.Fatalf("widgets hello %+v %v", m, err)
+	}
 
 	// An edit in the web UI is announced.
 	var doc map[string]any
@@ -116,6 +120,7 @@ func TestSyncStream(t *testing.T) {
 	if c := e.do("PUT", "/api/v1/profiles/p_default/layout", doc, nil); c != 200 {
 		t.Fatalf("put = %d", c)
 	}
+	m = streamMessage{}
 	if err := wsjson.Read(ctx, conn, &m); err != nil || m.Type != "version" || m.Version != 1 {
 		t.Fatalf("after edit %+v %v", m, err)
 	}

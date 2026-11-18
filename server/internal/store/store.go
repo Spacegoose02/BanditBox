@@ -128,6 +128,15 @@ var migrations = []string{
 		updated_at INTEGER NOT NULL,
 		PRIMARY KEY (device_id, sha256)
 	) STRICT;`,
+	`CREATE TABLE connectors (
+		id         TEXT PRIMARY KEY,
+		kind       TEXT NOT NULL,
+		name       TEXT NOT NULL,
+		enabled    INTEGER NOT NULL DEFAULT 1,
+		settings   TEXT NOT NULL DEFAULT '{}',
+		secret     TEXT NOT NULL DEFAULT '',
+		created_at INTEGER NOT NULL
+	) STRICT;`,
 }
 
 func (s *Store) migrate(ctx context.Context) error {
