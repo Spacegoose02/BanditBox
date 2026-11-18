@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { beforeNavigate } from '$app/navigation';
-	import { api, ApiError, ago } from '$lib/api';
+	import { api, ApiError, ago, type WidgetFeed } from '$lib/api';
 	import {
 		deleteFolder,
 		move,
@@ -21,6 +21,8 @@
 	/** The document as last loaded or saved, to tell whether there are unsaved changes. */
 	let saved = $state('');
 	let apps = $state<KnownApp[]>([]);
+	/** Widget feeds from the server's connectors (Integrations). */
+	let feeds = $state<WidgetFeed[]>([]);
 	let error = $state('');
 	let busy = $state(false);
 	let savedAt = $state<string | null>(null);
@@ -58,9 +60,14 @@
 	async function load() {
 		error = '';
 		try {
-			const [layout, known] = await Promise.all([api.layout(id), api.apps().catch(() => [])]);
+			const [layout, known, fd] = await Promise.all([
+				api.layout(id),
+				api.apps().catch(() => []),
+				api.feeds().catch(() => ({ version: 0, feeds: [] }))
+			]);
 			show(layout as LayoutDoc);
 			apps = known;
+			feeds = fd.feeds;
 		} catch (err) {
 			error = (err as Error).message;
 		}
@@ -100,17 +107,45 @@
 		}
 	}
 
-	function addRow(type: 'apps' | 'watchnext') {
+	function addRow(type: 'apps' | 'watchnext' | 'widget') {
 		if (!doc) return;
 		const rid = newId(
 			'r',
 			doc.rows.map((r) => r.id)
 		);
-		const row: Row =
-			type === 'apps'
-				? { id: rid, type, title: 'New row', items: [], tile: {} }
-				: { id: rid, type, title: 'Continue watching' };
+		let row: Row;
+		if (type === 'apps') row = { id: rid, type, title: 'New row', items: [], tile: {} };
+		else if (type === 'widget') {
+			const f = rowFeeds[0];
+			row = { id: rid, type, title: f?.name ?? 'Widget', feed: f?.id ?? '' };
+		} else row = { id: rid, type, title: 'Continue watching' };
 		doc.rows.push(row);
+	}
+
+	/** Feeds that fit a home row, and weather feeds for the top bar. */
+	const rowFeeds = $derived(feeds.filter((f) => f.template !== 'weather'));
+	const weatherFeeds = $derived(feeds.filter((f) => f.template === 'weather'));
+	const FEED_ID = /^[a-z0-9_-]+(\.[a-z0-9_-]+)+$/;
+
+	/** The weather feed shown in the top bar, if any. */
+	const topWeather = $derived(
+		(doc?.topBar ?? []).find((it) => FEED_ID.test(it) && !rowFeedIds.has(it)) ?? ''
+	);
+	const rowFeedIds = $derived(new Set(rowFeeds.map((f) => f.id)));
+
+	function setTopWeather(feed: string) {
+		if (!doc) return;
+		const bar = (doc.topBar ?? []).filter((it) => it !== topWeather);
+		if (feed) {
+			const at = bar.indexOf('clock');
+			bar.splice(at + 1, 0, feed);
+		}
+		doc.topBar = bar;
+	}
+
+	function feedLabel(fid: unknown) {
+		const f = feeds.find((x) => x.id === fid);
+		return f ? `${f.name} (${f.id})` : String(fid);
 	}
 
 	function removeRow(i: number) {
@@ -257,6 +292,21 @@
 					folders={doc.folders}
 					empty="No apps in this row yet."
 				/>
+			{:else if row.type === 'widget'}
+				<label
+					><span>Feed</span>
+					<select bind:value={row.feed}>
+						{#if row.feed && !feeds.some((f) => f.id === row.feed)}
+							<option value={row.feed}>{row.feed} (not on this server)</option>
+						{/if}
+						{#each rowFeeds as f (f.id)}
+							<option value={f.id}>{feedLabel(f.id)}</option>
+						{/each}
+					</select></label
+				>
+				{#if feeds.find((f) => f.id === row.feed && !f.kidsSafe) && doc.profile.kids}
+					<p class="error small">This feed isn't kids-safe, so a kids profile hides it.</p>
+				{/if}
 			{:else if row.type === 'watchnext' || row.type === 'channel'}
 				{#if row.type === 'channel'}
 					<p class="small">From <strong>{appLabel(row.package)}</strong></p>
@@ -290,7 +340,32 @@
 	<div class="row adds">
 		<button onclick={() => addRow('apps')}>Add an apps row</button>
 		<button onclick={() => addRow('watchnext')}>Add a Continue watching row</button>
+		<button
+			onclick={() => addRow('widget')}
+			disabled={rowFeeds.length === 0}
+			title={rowFeeds.length === 0 ? 'Add a connector under Integrations first' : ''}
+			>Add a widget row</button
+		>
 	</div>
+
+	<h2>Top bar</h2>
+	<section class="panel">
+		<label
+			><span>Weather next to the clock</span>
+			<select value={topWeather} onchange={(e) => setTopWeather(e.currentTarget.value)}>
+				<option value="">None</option>
+				{#if topWeather && !weatherFeeds.some((f) => f.id === topWeather)}
+					<option value={topWeather}>{topWeather} (not on this server)</option>
+				{/if}
+				{#each weatherFeeds as f (f.id)}
+					<option value={f.id}>{feedLabel(f.id)}</option>
+				{/each}
+			</select></label
+		>
+		{#if weatherFeeds.length === 0}
+			<p class="muted small">Add Weather Scout under <a href="/integrations">Integrations</a>.</p>
+		{/if}
+	</section>
 
 	<h2>Folders</h2>
 	{#each doc.folders ?? [] as folder (folder.id)}
