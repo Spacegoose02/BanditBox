@@ -1,0 +1,83 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish a signed APK on GitHub Releases. The RAM budget check
+# must pass first. Setup (signing key and secrets) is in docs/releasing.md.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  ram-budget:
+    uses: ./.github/workflows/ram.yml
+
+  release:
+    needs: ram-budget
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Read the version from the tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is not vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.BANDITBOX_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The BANDITBOX_KEYSTORE_BASE64 secret is missing. See docs/releasing.md."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Build the signed release APK
+        working-directory: android
+        env:
+          BANDITBOX_VERSION: ${{ steps.version.outputs.version }}
+          BANDITBOX_KEYSTORE: ${{ runner.temp }}/release.jks
+          BANDITBOX_KEYSTORE_PASSWORD: ${{ secrets.BANDITBOX_KEYSTORE_PASSWORD }}
+          BANDITBOX_KEY_ALIAS: ${{ secrets.BANDITBOX_KEY_ALIAS }}
+          BANDITBOX_KEY_PASSWORD: ${{ secrets.BANDITBOX_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Check the signature and name the APK
+        id: apk
+        run: |
+          apk="banditbox-${{ steps.version.outputs.version }}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$apk"
+          apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$apksigner" verify --print-certs "$apk" | tee signature.txt
+          sha256sum "$apk" > "$apk.sha256"
+          echo "apk=$apk" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK: ${{ steps.apk.outputs.apk }}
+        run: |
+          prerelease=""
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then prerelease="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" "$APK" "$APK.sha256" \
+            --title "BanditBox ${GITHUB_REF_NAME#v}" --generate-notes $prerelease
+
+      - name: Remove the signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
