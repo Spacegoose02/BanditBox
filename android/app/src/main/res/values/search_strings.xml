@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search">Search</string>
+    <string name="search_hint">Search apps, shows and cards</string>
+    <string name="search_voice">🎤 Speak</string>
+    <string name="search_apps">Apps</string>
+    <string name="search_shows">Shows and cards</string>
+    <string name="search_more">Search in an app</string>
+    <string name="search_in">Search in %1$s</string>
+    <string name="search_everywhere">Search everywhere on this TV</string>
+    <string name="search_nothing">Nothing on the home screen matches “%1$s”.</string>
+</resources>

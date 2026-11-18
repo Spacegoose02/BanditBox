@@ -84,6 +84,7 @@ import com.spacegoose.banditbox.sync.WidgetSnapshot
 import com.spacegoose.banditbox.layout.WidgetFeeds
 import com.spacegoose.banditbox.system.WidgetLaunch
 import com.spacegoose.banditbox.system.PluginFeeds
+import com.spacegoose.banditbox.system.AppSearch
 import com.spacegoose.banditbox.sync.SyncController
 import com.spacegoose.banditbox.system.BackupFiles
 import com.spacegoose.banditbox.system.BackupSource
@@ -137,7 +138,7 @@ class LauncherDeps(
 /** A remote button shortcut asked for a screen. [id] tells two requests for the same screen apart. */
 data class ShowRequest(val screen: String, val id: Int)
 
-private enum class Screen { HOME, ALL_APPS, EDIT_ROWS, PICK_PROFILE, HOME_SETUP }
+private enum class Screen { HOME, ALL_APPS, SEARCH, EDIT_ROWS, PICK_PROFILE, HOME_SETUP }
 
 /** An item being moved along its row with the D-pad. */
 private class Moving(val rowId: String, val item: String, val label: String)
@@ -801,11 +802,29 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
     }
     val topBarActions = remember(deps) {
         TopBarActions(
+            onSearch = { screen = Screen.SEARCH },
             onAllApps = { screen = Screen.ALL_APPS },
             onInputs = { overlay = Overlay.Inputs },
             onNetwork = { deps.launch(SystemShortcuts.network) },
             onSettings = { parentGate { overlay = Overlay.Settings } },
             onProfile = { parentGate { screen = Screen.PICK_PROFILE } },
+        )
+    }
+
+    // ---- Search ----
+    val searchable = remember(screen == Screen.SEARCH, currentApps) {
+        if (screen == Screen.SEARCH) AppSearch.searchablePackages(context.packageManager) else emptySet()
+    }
+    val hasGlobalSearch = remember { AppSearch.hasGlobal(context.packageManager) }
+    val searchSources = remember(allApps, tv, contentAllowed, widgetState, searchable, currentDoc?.profile?.kids) {
+        val kids = currentDoc?.profile?.kids != null
+        SearchSources(
+            apps = allApps,
+            programs = (tv.watchNext + tv.previews.filter { it.browsable }).filter { contentAllowed(it.packageName) },
+            cards = widgetState.feeds.keys.mapNotNull(widgetState::feed).flatMap { feed -> feed.cards.map { it to feed } },
+            searchIn = allApps.filter { it.packageName in searchable && it.packageName != context.packageName },
+            global = hasGlobalSearch && !kids,
+            appLabel = { pkg -> byPackage[pkg]?.label ?: pkg },
         )
     }
 
@@ -833,6 +852,11 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                 Key.DirectionUp, Key.DirectionDown -> true
                 else -> false
             }
+        }
+        // The remote's Search key, where it reaches apps, opens BanditBox's search.
+        if (event.key == Key.Search && event.type == KeyEventType.KeyUp && profileId != null) {
+            screen = Screen.SEARCH
+            return true
         }
         // Menu toggles All apps, like Projectivy. Remotes without a Menu key use the top bar button.
         if (event.key == Key.Menu && event.type == KeyEventType.KeyUp && profileId != null) {
@@ -898,6 +922,14 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                     actions = tileActions,
                 )
                 Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
+                Screen.SEARCH -> SearchScreen(
+                    sources = searchSources,
+                    visuals = deps.visuals,
+                    actions = tileActions,
+                    onProgram = contentState.onOpen,
+                    onCard = widgetState.onOpen,
+                    launch = deps.launch,
+                )
                 Screen.EDIT_ROWS -> RowEditor(
                     doc = currentDoc,
                     edit = edit,

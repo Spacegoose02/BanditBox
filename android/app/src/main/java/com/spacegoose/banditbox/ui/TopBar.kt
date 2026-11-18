@@ -33,6 +33,7 @@ import java.util.Locale
 
 /** What the top bar's buttons do. Kept separate so the bar stays a plain drawing. */
 class TopBarActions(
+    val onSearch: () -> Unit,
     val onAllApps: () -> Unit,
     val onInputs: () -> Unit,
     val onNetwork: () -> Unit,
@@ -71,6 +72,7 @@ fun TopBar(
             Text(text = note, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         }
         Spacer(Modifier.weight(1f))
+        Button(onClick = actions.onSearch) { Text(stringResource(R.string.search)) }
         Button(onClick = actions.onAllApps) { Text(stringResource(R.string.all_apps)) }
         for (item in items) {
             when (item) {
