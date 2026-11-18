@@ -145,6 +145,25 @@
     <string name="key_input">Input</string>
     <string name="key_settings">Settings</string>
 
+    <!-- Backup and restore -->
+    <string name="backup">Backup and restore</string>
+    <string name="backup_now">Back up now</string>
+    <string name="backup_to_file">Save a backup to a file…</string>
+    <string name="backup_restore">Restore from a backup</string>
+    <string name="backup_done_title">Backup saved</string>
+    <string name="backup_done">Saved %1$s to %2$s. It holds every profile on this TV.</string>
+    <string name="backup_place_downloads">Downloads/BanditBox and BanditBox\'s own files</string>
+    <string name="backup_place_app">BanditBox\'s own files (Android/data)</string>
+    <string name="backup_place_file">the file you chose</string>
+    <string name="backup_failed">Couldn\'t save the backup</string>
+    <string name="backup_pick">Restore which backup?</string>
+    <string name="backup_none">No backups found on this TV. Back up first, or choose a file.</string>
+    <string name="backup_choose_file">Choose a file…</string>
+    <string name="backup_restore_confirm">Replace every profile on this TV with the %1$d in this backup from %2$s? A copy of what\'s here now is saved first.</string>
+    <string name="backup_restore_action">Restore</string>
+    <string name="backup_restore_failed">Couldn\'t restore: %1$s</string>
+    <string name="ok">OK</string>
+
     <plurals name="folder_count">
         <item quantity="one">%d app</item>
         <item quantity="other">%d apps</item>
