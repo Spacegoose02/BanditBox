@@ -16,6 +16,7 @@ JSON Schemas (draft 2020-12) shared by the TV app and the server. They are the s
 - `wallpaper` is content-addressed media on the server: `media:sha256-<hex>`.
 - `pin` is a hash, never the PIN itself.
 - `remap[].key` is an Android key name without `KEYCODE_` (for example `HOME`, `PROG_RED`), and `press` is `short`, `long` or `double`.
+- `profile.kids` marks a kids profile. It sees only `approvedApps`, draws with the kids-safe theme (`theme.id` `kids`), and needs `parentPin` (a hash like `pin`) for settings, switching profiles and lifting a lock. `dailyLimitMin` counts app time from midnight on the TV, `bedtime` may run past midnight, `warnMin` sets the warning and `unlockMin` how long a parent unlock lasts. Screen time used and unlocks are per TV and never sync.
 - The TV reads leniently (unknown optional fields are ignored) so an older TV keeps working with a newer server. Anything that would break an older reader bumps `schema`.
 
 Validate locally with `pipx run check-jsonschema --schemafile layout.schema.json examples/*.json`.

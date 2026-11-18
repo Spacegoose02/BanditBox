@@ -34,12 +34,25 @@ data class Profile(
     val kids: Kids? = null,
 )
 
+/** Present only on a kids profile. See [KidsRules] for how the limits are applied. */
 @Serializable
 data class Kids(
+    /** Hash of the parent PIN (same format as [Profile.pin]). Null leaves the parent options open. */
+    val parentPin: String? = null,
     val approvedApps: List<String> = emptyList(),
+    /** Minutes of app time a day. Null means no limit. */
     val dailyLimitMin: Int? = null,
+    /** Minutes of warning before the limit or bedtime; 0 turns the warning off. */
+    val warnMin: Int = DEFAULT_WARN_MIN,
     val bedtime: Bedtime? = null,
-)
+    /** How long the parent PIN lifts a bedtime or time-up lock. */
+    val unlockMin: Int = DEFAULT_UNLOCK_MIN,
+) {
+    companion object {
+        const val DEFAULT_WARN_MIN = 5
+        const val DEFAULT_UNLOCK_MIN = 30
+    }
+}
 
 /** Times are "HH:MM", local to the TV. */
 @Serializable

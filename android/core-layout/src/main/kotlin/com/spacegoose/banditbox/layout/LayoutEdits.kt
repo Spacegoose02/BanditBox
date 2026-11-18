@@ -138,6 +138,64 @@ object LayoutEdits {
     fun setAutoLogin(doc: LayoutDocument, on: Boolean): LayoutDocument =
         if (doc.profile.autoLogin == on) doc else doc.copy(profile = doc.profile.copy(autoLogin = on)).bumped()
 
+    // ---- Kids ----
+
+    /** Turns this profile into a kids profile with [kids], and the kids-safe theme. */
+    fun makeKids(doc: LayoutDocument, kids: Kids): LayoutDocument =
+        doc.copy(
+            profile = doc.profile.copy(kids = kids),
+            theme = (doc.theme ?: Theme()).copy(id = KIDS_THEME_ID),
+        ).bumped()
+
+    /** Back to a normal profile. Rows, theme and everything else stay as they are. */
+    fun endKids(doc: LayoutDocument): LayoutDocument =
+        if (doc.profile.kids == null) doc else doc.copy(profile = doc.profile.copy(kids = null)).bumped()
+
+    /** Lets a kids profile use [pkg], and puts it in the first apps row so it shows up at once. */
+    fun approveApp(doc: LayoutDocument, pkg: String): LayoutDocument {
+        val kids = doc.profile.kids ?: return doc
+        var next = doc
+        if (pkg !in kids.approvedApps) {
+            next = next.withKids(kids.copy(approvedApps = kids.approvedApps + pkg))
+        }
+        val firstRow = next.rows.firstOrNull { it is Row.Apps } as Row.Apps?
+        val inSomeRow = next.rows.any { it is Row.Apps && pkg in it.items } ||
+            next.folders.any { pkg in it.items }
+        next = when {
+            inSomeRow -> next
+            firstRow != null -> next.editAppsRow(firstRow.id, bump = false) { it.copy(items = it.items + pkg) }
+            else -> next.copy(rows = next.rows + Row.Apps(id = nextId("r", next.rows.map { it.id }), title = null, items = listOf(pkg)))
+        }
+        return if (next == doc) doc else next.bumped()
+    }
+
+    /** Takes [pkg] away from a kids profile. It stays in its row, hidden, so approving it again puts it back. */
+    fun unapproveApp(doc: LayoutDocument, pkg: String): LayoutDocument {
+        val kids = doc.profile.kids ?: return doc
+        if (pkg !in kids.approvedApps) return doc
+        return doc.withKids(kids.copy(approvedApps = kids.approvedApps - pkg)).bumped()
+    }
+
+    /** [minutes] null removes the limit. */
+    fun setDailyLimit(doc: LayoutDocument, minutes: Int?): LayoutDocument =
+        doc.editKids { it.copy(dailyLimitMin = minutes?.coerceIn(1, 1440)) }
+
+    /** [bedtime] null removes it. */
+    fun setBedtime(doc: LayoutDocument, bedtime: Bedtime?): LayoutDocument =
+        doc.editKids { it.copy(bedtime = bedtime) }
+
+    fun setUnlockMinutes(doc: LayoutDocument, minutes: Int): LayoutDocument =
+        doc.editKids { it.copy(unlockMin = minutes.coerceIn(5, 240)) }
+
+    fun setWarnMinutes(doc: LayoutDocument, minutes: Int): LayoutDocument =
+        doc.editKids { it.copy(warnMin = minutes.coerceIn(0, 60)) }
+
+    fun setParentPin(doc: LayoutDocument, pinHash: String?): LayoutDocument =
+        doc.editKids { it.copy(parentPin = pinHash) }
+
+    /** The theme every kids profile starts with. */
+    const val KIDS_THEME_ID = "kids"
+
     // ---- Button remapping ----
 
     /** Sets what [press] on [key] does, replacing any rule for the same key and press. */
@@ -158,6 +216,14 @@ object LayoutEdits {
     // ---- Helpers ----
 
     private fun LayoutDocument.bumped() = copy(version = version + 1)
+
+    private fun LayoutDocument.withKids(kids: Kids) = copy(profile = profile.copy(kids = kids))
+
+    private inline fun LayoutDocument.editKids(change: (Kids) -> Kids): LayoutDocument {
+        val kids = profile.kids ?: return this
+        val next = change(kids)
+        return if (next == kids) this else withKids(next).bumped()
+    }
 
     private inline fun LayoutDocument.editAppsRow(
         rowId: String,

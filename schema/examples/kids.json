@@ -7,9 +7,12 @@
     "pin": "argon2id$placeholder",
     "autoLogin": false,
     "kids": {
+      "parentPin": "pbkdf2-sha256$50000$placeholder$placeholder",
       "approvedApps": ["com.spacegoose.bingebandit", "com.spacegoose.wavelength"],
       "dailyLimitMin": 120,
-      "bedtime": { "start": "20:00", "end": "07:00" }
+      "warnMin": 5,
+      "bedtime": { "start": "20:00", "end": "07:00" },
+      "unlockMin": 30
     }
   },
   "theme": {
