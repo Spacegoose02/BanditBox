@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
@@ -102,6 +105,10 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val drawn = remember(rows, content.tv, content.allowed) { drawnRows(rows, content) }
+    // Start with the first tile focused, so the first D-pad press moves instead of only highlighting.
+    val firstTile = remember { FocusRequester() }
+    val firstAppsRow = drawn.indexOfFirst { it is Drawn.Apps && it.row.firstShown(apps) >= 0 }
+    LaunchedEffect(firstAppsRow >= 0) { if (firstAppsRow >= 0) focusWhenReady(firstTile) }
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
         topBar()
         if (drawn.isEmpty()) {
@@ -115,9 +122,9 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = PaddingValues(top = 20.dp, bottom = 32.dp),
         ) {
-            items(drawn, key = { it.key }) { row ->
+            itemsIndexed(drawn, key = { _, row -> row.key }) { index, row ->
                 when (row) {
-                    is Drawn.Apps -> AppsRow(row.row, apps, visuals, actions)
+                    is Drawn.Apps -> AppsRow(row.row, apps, visuals, actions, if (index == firstAppsRow) firstTile else null)
                     is Drawn.Cards -> ContentRowView(content.titleFor(row.row), row.row.size, row.programs, content.onOpen)
                     is Drawn.AskPermission -> ContentPermissionRow(content.titleFor(row.row), content.onAllow)
                 }
@@ -127,7 +134,15 @@ fun HomeScreen(
 }
 
 @Composable
-private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: AppVisuals, actions: TileActions) {
+private fun AppsRow(
+    row: ResolvedAppsRow,
+    apps: Map<String, AppEntry>,
+    visuals: AppVisuals,
+    actions: TileActions,
+    /** Put on the row's first shown tile, when this row gets focus at start. */
+    firstTile: FocusRequester?,
+) {
+    val first = row.firstShown(apps)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         row.title?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
         LazyRow(
@@ -135,7 +150,8 @@ private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: 
             // Room for the focused tile to scale up without clipping.
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
         ) {
-            items(row.items, key = { it.key() }) { item ->
+            itemsIndexed(row.items, key = { _, item -> item.key() }) { index, item ->
+                val focus = if (firstTile != null && index == first) Modifier.focusRequester(firstTile) else Modifier
                 when (item) {
                     is ResolvedItem.App -> apps[item.packageName]?.let { app ->
                         AppTile(
@@ -144,6 +160,7 @@ private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: 
                             spec = row.tile,
                             onClick = { actions.onOpen(app) },
                             onLongClick = { actions.onAppMenu(app, Place.InRow(row.id)) },
+                            modifier = focus,
                         )
                     }
                     is ResolvedItem.FolderItem -> FolderTile(
@@ -151,6 +168,7 @@ private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: 
                         spec = row.tile,
                         onClick = { actions.onFolderOpen(item) },
                         onLongClick = { actions.onFolderMenu(item, row.id) },
+                        modifier = focus,
                     )
                 }
             }
@@ -159,6 +177,10 @@ private fun AppsRow(row: ResolvedAppsRow, apps: Map<String, AppEntry>, visuals: 
 }
 
 private fun ResolvedItem.key(): String = rawRef()
+
+/** Index of the first item that is drawn (an app that is gone draws nothing), or -1. */
+private fun ResolvedAppsRow.firstShown(apps: Map<String, AppEntry>): Int =
+    items.indexOfFirst { it !is ResolvedItem.App || it.packageName in apps }
 
 /** The item as it is written in the layout document: a package name or folder:<id>. */
 fun ResolvedItem.rawRef(): String = when (this) {
