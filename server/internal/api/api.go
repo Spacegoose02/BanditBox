@@ -14,6 +14,7 @@ import (
 	"github.com/spacegoose02/banditbox/server/internal/auth"
 	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
+	"github.com/spacegoose02/banditbox/server/internal/webui"
 	"github.com/spacegoose02/banditbox/server/internal/store"
 )
 
@@ -80,6 +81,15 @@ func NewHandler(d Deps) http.Handler {
 	mux.HandleFunc("POST /api/v1/sync/ops", s.device(s.syncOps))
 	mux.HandleFunc("GET /api/v1/sync/stream", s.device(s.syncStream))
 
+	// Everything outside /api/ is the web UI.
+	ui := webui.Handler()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			writeError(w, http.StatusNotFound, "no such endpoint")
+			return
+		}
+		ui.ServeHTTP(w, r)
+	})
 	return sameOrigin(mux)
 }
 

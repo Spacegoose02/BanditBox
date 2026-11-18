@@ -1,6 +1,14 @@
 # BanditBox server: one static Go binary on a distroless base.
 # Build from the repo root:  docker build -f deploy/Dockerfile -t banditbox .
 
+# The web UI is plain static files, so it builds once on the build machine.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+WORKDIR /src/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+RUN npm run build
+
 # The Go stage runs on the build machine and cross-compiles, so multi-arch
 # builds need no emulation.
 FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS server
@@ -11,6 +19,7 @@ COPY server/go.mod server/go.sum ./
 RUN go mod download
 COPY server/ ./
 COPY schema/ /src/schema/
+COPY --from=web /src/web/build/ ./internal/webui/dist/
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/banditbox ./cmd/banditbox
 
