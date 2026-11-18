@@ -180,7 +180,35 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 	return data as T;
 }
 
+export interface HomeAssistantConfig {
+	broker: string;
+	username: string;
+	/** Sent only when changing it; never returned. */
+	password?: string;
+	prefix: string;
+	discovery: string;
+	webhook: string;
+}
+
+export interface HomeAssistantView extends HomeAssistantConfig {
+	hasPassword: boolean;
+	status: {
+		connected: boolean;
+		error?: string;
+		tvs: {
+			device: Device;
+			state: { app: string; appLabel: string; playing: boolean; screenOn: boolean };
+			updated: string;
+		}[];
+	};
+}
+
 export const api = {
+	homeAssistant: () => request<HomeAssistantView>('GET', '/homeassistant'),
+	saveHomeAssistant: (c: HomeAssistantConfig & { clearPassword?: boolean }) =>
+		request<HomeAssistantView>('PUT', '/homeassistant', c),
+	testHomeAssistant: (c: HomeAssistantConfig) => request<void>('POST', '/homeassistant/test', c),
+
 	status: () => request<AuthStatus>('GET', '/auth/status'),
 	setup: (code: string, username: string, password: string) =>
 		request<AuthStatus>('POST', '/auth/setup', { code, username, password }),

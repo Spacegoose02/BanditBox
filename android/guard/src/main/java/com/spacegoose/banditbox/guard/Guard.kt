@@ -30,6 +30,13 @@ object Guard {
     @Volatile
     internal var service: WeakReference<GuardService>? = null
 
+    /**
+     * Set by the launcher: runs on the main thread with the package of each app that comes to
+     * the front (BanditBox included), while the service is on.
+     */
+    @Volatile
+    var onForeground: ((String) -> Unit)? = null
+
     /** Call after the open profile's button rules change, so the service picks them up. */
     fun remapsChanged() {
         service?.get()?.reloadRules()

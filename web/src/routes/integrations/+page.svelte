@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api, ago, type Connector, type ConnectorKind, type WidgetFeed } from '$lib/api';
 	import FeedPreview from '$lib/components/FeedPreview.svelte';
+	import HomeAssistantPanel from '$lib/components/HomeAssistantPanel.svelte';
 
 	let kinds = $state<ConnectorKind[]>([]);
 	let connectors = $state<Connector[]>([]);
@@ -224,6 +225,8 @@
 		</div>
 	</section>
 {/if}
+
+<HomeAssistantPanel />
 
 <style>
 	h2 {

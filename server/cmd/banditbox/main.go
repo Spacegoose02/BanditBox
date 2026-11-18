@@ -19,6 +19,7 @@ import (
 	"github.com/spacegoose02/banditbox/server/internal/api"
 	"github.com/spacegoose02/banditbox/server/internal/auth"
 	"github.com/spacegoose02/banditbox/server/internal/backup"
+	"github.com/spacegoose02/banditbox/server/internal/homeassistant"
 	"github.com/spacegoose02/banditbox/server/internal/hub"
 	"github.com/spacegoose02/banditbox/server/internal/mdns"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
@@ -74,12 +75,14 @@ func main() {
 	mediaDir := filepath.Join(dataDir, "widget-media")
 	wm := widgets.NewManager(st, mediaDir, hb, log)
 	go wm.Run(ctx)
+	ha := homeassistant.New(st, log)
+	go ha.Run(ctx)
 
 	srv := &http.Server{
 		Addr: addr,
 		Handler: api.NewHandler(api.Deps{
 			Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hb, Backups: backups,
-			APKDir: filepath.Join(dataDir, "apks"), Widgets: wm, MediaDir: mediaDir, Log: log,
+			APKDir: filepath.Join(dataDir, "apks"), Widgets: wm, MediaDir: mediaDir, HomeAssistant: ha, Log: log,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

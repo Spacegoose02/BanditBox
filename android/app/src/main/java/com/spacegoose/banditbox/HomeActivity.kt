@@ -75,11 +75,13 @@ class HomeActivity : ComponentActivity() {
         super.onResume()
         foreground = true
         (application as BanditBoxApplication).sync.setForeground(true)
+        (application as BanditBoxApplication).activity.launcherShown(true)
     }
 
     override fun onPause() {
         foreground = false
         (application as BanditBoxApplication).sync.setForeground(false)
+        (application as BanditBoxApplication).activity.launcherShown(false)
         super.onPause()
     }
 

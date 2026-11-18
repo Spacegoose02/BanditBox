@@ -50,6 +50,9 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 | `POST /connectors/test` | `{kind, settings}` or `{id, settings}` | `{feeds}` from one fetch, nothing saved. 422 `{error}` says what went wrong (address, key, reply) |
 | `POST /connectors/{id}/refresh` | | 202. Fetches now |
 | `GET /connectors/feeds` | | `{version, feeds}`: what the TVs get |
+| `GET /homeassistant` | | `{broker, username, prefix, discovery, webhook, hasPassword, status: {connected, error, tvs: [{device, state, updated}]}}`. The password is never sent back |
+| `PUT /homeassistant` | `{broker, username, password?, clearPassword?, prefix, discovery, webhook}` | The same as `GET`. An empty password keeps the saved one. See [homeassistant.md](homeassistant.md) |
+| `POST /homeassistant/test` | the same as `PUT` | 204 after a test message reached the broker and the webhook, nothing saved. 502 `{error}` otherwise |
 
 ## TV
 
@@ -74,6 +77,7 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 - `POST /sync/seed {layouts: [doc]}` → `[{profileId, version, doc}]`. Only while `/device/me` says `fresh` (no layout ever edited) and only for a TV allowed every profile: replaces the server's profiles with the TV's own, so the first TV keeps its setup. 409 once the server isn't fresh.
 - `POST /sync/profiles` with a layout document → 201 `{profileId, version, doc}`: a profile made on the TV. A TV limited to some profiles gets it added to its list. 409 if the id exists.
 - `DELETE /sync/profiles/{id}` → 204: a profile deleted on the TV.
+- `POST /device/activity {app, appLabel, playing, screenOn}` → 204. What the TV is doing, for Home Assistant: the package in front (`""` when not known), whether sound is playing, and whether the screen is on. Send it when it changes.
 - `GET /widgets` → `{version, feeds}`: every widget feed from the server's connectors (`schema/widget-feed.schema.json`). Cache them; the TV draws from its copy. A feed with `error` holds the last good cards. Hide feeds whose `kidsSafe` is false on kids profiles.
 - `GET /media/{sha256}` → a picture a feed refers to as `media:sha256-<hex>`. Never changes, so cache it.
 - `GET /sync/stream` (WebSocket, open only while the launcher is in front). On connect the server sends `{"type":"version","profileId","version"}` for each allowed profile, then one whenever a profile changes. `{"type":"profiles"}` means profiles were added or removed, or this TV's allowed profiles changed: call `/device/me` again. `{"type":"installs"}` means there are APKs to install: call `/device/installs`. `{"type":"widgets","version"}` comes on connect and whenever a widget feed changes: call `/widgets` if your copy is older. Fetch the layout when the version is newer than yours. The server pings every 30 s. Close code 4401 means the TV was revoked.
