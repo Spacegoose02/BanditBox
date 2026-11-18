@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spacegoose02/banditbox/server/internal/api"
+	"github.com/spacegoose02/banditbox/server/internal/auth"
 	"github.com/spacegoose02/banditbox/server/internal/store"
 )
 
@@ -37,9 +38,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	au := auth.New(st)
+	if code, err := au.SetupCode(ctx); err != nil {
+		log.Error("check admin", "err", err)
+		os.Exit(1)
+	} else if code != "" {
+		log.Warn("first run: open the web UI and create the admin account with this setup code", "setupCode", code)
+	}
+	go cleanSessions(ctx, st, log)
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.NewHandler(version),
+		Handler:           api.NewHandler(api.Deps{Version: version, Store: st, Auth: au, Log: log}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -56,6 +66,22 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("shutdown", "err", err)
+	}
+}
+
+// cleanSessions removes expired web UI sessions once a day.
+func cleanSessions(ctx context.Context, st *store.Store, log *slog.Logger) {
+	t := time.NewTicker(24 * time.Hour)
+	defer t.Stop()
+	for {
+		if err := st.DeleteExpiredSessions(ctx); err != nil && ctx.Err() == nil {
+			log.Warn("clean sessions", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
 	}
 }
 
