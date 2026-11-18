@@ -21,6 +21,18 @@ jobs:
       - run: pip install check-jsonschema==0.39.0
       - name: Schemas are valid JSON Schema
         run: check-jsonschema --check-metaschema *.schema.json
+      - name: Op examples pass
+        run: check-jsonschema --schemafile op.schema.json examples/ops/*.json
+      - name: Invalid ops fail
+        run: |
+          status=0
+          for f in examples/ops/invalid/*.json; do
+            if check-jsonschema --schemafile op.schema.json "$f" > /dev/null 2>&1; then
+              echo "::error file=schema/$f::expected this op to be rejected"
+              status=1
+            fi
+          done
+          exit $status
       - name: Examples pass
         run: check-jsonschema --schemafile layout.schema.json examples/*.json
       - name: Invalid examples fail

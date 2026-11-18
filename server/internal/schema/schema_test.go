@@ -38,12 +38,34 @@ func TestInvalidExamplesFail(t *testing.T) {
 	}
 }
 
-func TestEmbeddedCopyMatchesSource(t *testing.T) {
-	src, err := os.ReadFile("../../../schema/layout.schema.json")
-	if err != nil {
-		t.Fatal(err)
+func TestOpExamples(t *testing.T) {
+	check := func(glob string, wantValid bool) {
+		files, _ := filepath.Glob(glob)
+		if len(files) == 0 {
+			t.Fatalf("no files for %s", glob)
+		}
+		for _, f := range files {
+			raw, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := ValidateOp(raw); (err == nil) != wantValid {
+				t.Errorf("%s: valid=%v, err=%v", f, wantValid, err)
+			}
+		}
 	}
-	if string(src) != string(layoutSchema) {
-		t.Fatal("internal/schema/layout.schema.json is out of date: run go generate ./... in server/")
+	check("../../../schema/examples/ops/*.json", true)
+	check("../../../schema/examples/ops/invalid/*.json", false)
+}
+
+func TestEmbeddedCopiesMatchSource(t *testing.T) {
+	for name, embedded := range map[string][]byte{"layout.schema.json": layoutSchema, "op.schema.json": opSchema} {
+		src, err := os.ReadFile("../../../schema/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(src) != string(embedded) {
+			t.Errorf("internal/schema/%s is out of date: run go generate ./... in server/", name)
+		}
 	}
 }
