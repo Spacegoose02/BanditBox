@@ -1,0 +1,1 @@
+{ "schema": 1, "id": "x.y", "name": "X", "template": "cardRow", "cards": [ { "id": "1", "title": "A", "progress": 1.5 } ] }

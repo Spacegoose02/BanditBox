@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": "bingebandit.continue-watching",
+  "name": "BingeBandit",
+  "template": "cardRow",
+  "sizes": ["row"],
+  "refreshSec": 120,
+  "kidsSafe": false,
+  "package": "com.bingebandit.tv",
+  "cards": [
+    {
+      "id": "42",
+      "title": "The Long Drive",
+      "subtitle": "S2 E4 · 31 min left",
+      "image": "media:sha256-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "imageAspect": 1.78,
+      "progress": 0.42,
+      "link": "bingebandit://play/42?t=1260",
+      "actions": [{ "label": "Show info", "link": "bingebandit://item/42" }]
+    }
+  ]
+}

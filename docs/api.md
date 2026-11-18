@@ -42,6 +42,14 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 | `POST /apks` | the APK file, `Content-Type: application/vnd.android.package-archive`, optional `X-File-Name` | 201, the APK (package and version read from its manifest). 422 if it isn't an APK. At most 512 MB |
 | `POST /apks/{sha256}/install` | `{devices}` (`[]` = every TV) | the APK with its installs. TVs in front hear about it at once |
 | `DELETE /apks/{sha256}` | | 204. Installs not done yet are dropped |
+| `GET /connectors/kinds` | | The connector kinds (Weather Scout, StatScraps, BingeBandit, JSON feed) with the settings each needs: `[{id, name, description, fields: [{key, label, help, placeholder, required, secret}], feeds: [{suffix, name, template}]}]` |
+| `GET /connectors` | | `[{id, kind, name, enabled, settings, created, hasKey, status: {lastRun, lastOk, lastError, nextRun, feeds}}]`. Keys are never sent back |
+| `POST /connectors` | `{kind, name?, id?, enabled?, settings}` | 201, the connector. The key goes in `settings.key`. `id` defaults to the kind (then `kind2`…), and its feeds are `<id>.<feed>`, for example `weatherscout.now` |
+| `PUT /connectors/{id}` | `{name?, enabled?, settings?}` | The connector. An empty `settings.key` keeps the stored key |
+| `DELETE /connectors/{id}` | | 204 |
+| `POST /connectors/test` | `{kind, settings}` or `{id, settings}` | `{feeds}` from one fetch, nothing saved. 422 `{error}` says what went wrong (address, key, reply) |
+| `POST /connectors/{id}/refresh` | | 202. Fetches now |
+| `GET /connectors/feeds` | | `{version, feeds}`: what the TVs get |
 
 ## TV
 
@@ -66,4 +74,6 @@ Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
 - `POST /sync/seed {layouts: [doc]}` → `[{profileId, version, doc}]`. Only while `/device/me` says `fresh` (no layout ever edited) and only for a TV allowed every profile: replaces the server's profiles with the TV's own, so the first TV keeps its setup. 409 once the server isn't fresh.
 - `POST /sync/profiles` with a layout document → 201 `{profileId, version, doc}`: a profile made on the TV. A TV limited to some profiles gets it added to its list. 409 if the id exists.
 - `DELETE /sync/profiles/{id}` → 204: a profile deleted on the TV.
-- `GET /sync/stream` (WebSocket, open only while the launcher is in front). On connect the server sends `{"type":"version","profileId","version"}` for each allowed profile, then one whenever a profile changes. `{"type":"profiles"}` means profiles were added or removed, or this TV's allowed profiles changed: call `/device/me` again. `{"type":"installs"}` means there are APKs to install: call `/device/installs`. Fetch the layout when the version is newer than yours. The server pings every 30 s. Close code 4401 means the TV was revoked.
+- `GET /widgets` → `{version, feeds}`: every widget feed from the server's connectors (`schema/widget-feed.schema.json`). Cache them; the TV draws from its copy. A feed with `error` holds the last good cards. Hide feeds whose `kidsSafe` is false on kids profiles.
+- `GET /media/{sha256}` → a picture a feed refers to as `media:sha256-<hex>`. Never changes, so cache it.
+- `GET /sync/stream` (WebSocket, open only while the launcher is in front). On connect the server sends `{"type":"version","profileId","version"}` for each allowed profile, then one whenever a profile changes. `{"type":"profiles"}` means profiles were added or removed, or this TV's allowed profiles changed: call `/device/me` again. `{"type":"installs"}` means there are APKs to install: call `/device/installs`. `{"type":"widgets","version"}` comes on connect and whenever a widget feed changes: call `/widgets` if your copy is older. Fetch the layout when the version is newer than yours. The server pings every 30 s. Close code 4401 means the TV was revoked.

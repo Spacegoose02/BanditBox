@@ -1,0 +1,2 @@
+{ "schema": 1, "id": "x.y", "name": "X", "template": "cardRow", "cards": [ { "id": "1", "title": "A", "actions": [
+  { "label": "a", "link": "x://a" }, { "label": "b", "link": "x://b" }, { "label": "c", "link": "x://c" }, { "label": "d", "link": "x://d" } ] } ] }

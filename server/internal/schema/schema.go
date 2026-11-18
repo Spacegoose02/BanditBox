@@ -6,6 +6,7 @@ package schema
 
 //go:generate cp ../../../schema/layout.schema.json layout.schema.json
 //go:generate cp ../../../schema/op.schema.json op.schema.json
+//go:generate cp ../../../schema/widget-feed.schema.json widget-feed.schema.json
 
 import (
 	"bytes"
@@ -21,6 +22,8 @@ var (
 	layoutSchema []byte
 	//go:embed op.schema.json
 	opSchema []byte
+	//go:embed widget-feed.schema.json
+	feedSchema []byte
 )
 
 type compiled struct {
@@ -34,6 +37,7 @@ type compiled struct {
 var (
 	layout = &compiled{url: "https://banditbox.dev/schema/layout.schema.json", src: layoutSchema}
 	op     = &compiled{url: "https://banditbox.dev/schema/op.schema.json", src: opSchema}
+	feed   = &compiled{url: "https://banditbox.dev/schema/widget-feed.schema.json", src: feedSchema}
 )
 
 func (c *compiled) get() (*jsonschema.Schema, error) {
@@ -71,3 +75,6 @@ func ValidateLayout(raw []byte) error { return layout.validate(raw) }
 
 // ValidateOp reports whether raw is a valid sync op.
 func ValidateOp(raw []byte) error { return op.validate(raw) }
+
+// ValidateFeed reports whether raw is a valid widget feed.
+func ValidateFeed(raw []byte) error { return feed.validate(raw) }

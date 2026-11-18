@@ -25,6 +25,7 @@ type Sub struct {
 	pending  map[string]int64
 	profiles bool
 	installs bool
+	widgets  int64
 	kicked   bool
 }
 
@@ -97,6 +98,29 @@ func (h *Hub) InstallsChanged(deviceID string) {
 			s.signal()
 		}
 	}
+}
+
+// WidgetsChanged tells every subscriber that the widget feeds are at a new version.
+func (h *Hub) WidgetsChanged(version int64) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for s := range h.subs {
+		s.mu.Lock()
+		if version > s.widgets {
+			s.widgets = version
+		}
+		s.mu.Unlock()
+		s.signal()
+	}
+}
+
+// TakeWidgets returns and clears the newest widget feed version announced, or 0.
+func (s *Sub) TakeWidgets() int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v := s.widgets
+	s.widgets = 0
+	return v
 }
 
 // TakeInstalls returns and clears whether the device has new apps to install.

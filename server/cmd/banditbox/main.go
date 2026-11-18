@@ -23,6 +23,7 @@ import (
 	"github.com/spacegoose02/banditbox/server/internal/mdns"
 	"github.com/spacegoose02/banditbox/server/internal/pairing"
 	"github.com/spacegoose02/banditbox/server/internal/store"
+	"github.com/spacegoose02/banditbox/server/internal/widgets"
 )
 
 // version is set at build time with -ldflags "-X main.version=...".
@@ -69,9 +70,17 @@ func main() {
 		go advertise(ctx, addr, log)
 	}
 
+	hb := hub.New()
+	mediaDir := filepath.Join(dataDir, "widget-media")
+	wm := widgets.NewManager(st, mediaDir, hb, log)
+	go wm.Run(ctx)
+
 	srv := &http.Server{
-		Addr:              addr,
-		Handler:           api.NewHandler(api.Deps{Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hub.New(), Backups: backups, APKDir: filepath.Join(dataDir, "apks"), Log: log}),
+		Addr: addr,
+		Handler: api.NewHandler(api.Deps{
+			Version: version, Store: st, Auth: au, Pairing: pairing.New(st), Hub: hb, Backups: backups,
+			APKDir: filepath.Join(dataDir, "apks"), Widgets: wm, MediaDir: mediaDir, Log: log,
+		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

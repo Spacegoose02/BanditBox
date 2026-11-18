@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banditbox.dev/schema/widget-feed.schema.json",
+  "title": "BanditBox widget feed",
+  "description": "One feed of cards for the home screen, from a server connector or an app on the TV. A layout row of type widget, or a topBar item, names it by its id. Themes style the templates; feeds only carry data.",
+  "type": "object",
+  "required": ["schema", "id", "name", "template", "cards"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": { "$ref": "#/$defs/feedId" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "template": {
+      "description": "How the TV draws the cards. cardRow: posters or banners in a row. stat: a big number. weather: conditions and a forecast. nowPlaying: what is playing. scoreboard: games and scores.",
+      "enum": ["cardRow", "stat", "weather", "nowPlaying", "scoreboard"]
+    },
+    "sizes": {
+      "description": "Where the feed fits. row: a full home row. 1x1, 2x1, 4x2: a tile, or the top bar for 1x1.",
+      "type": "array",
+      "items": { "enum": ["1x1", "2x1", "4x2", "row"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "refreshSec": { "description": "How often the source updates. The TV never asks more often than every 30 seconds.", "type": "integer", "minimum": 30, "maximum": 86400 },
+    "kidsSafe": { "description": "Shown on kids profiles. False hides the feed there.", "type": "boolean" },
+    "package": { "description": "The app the feed belongs to, opened when a card has no link.", "$ref": "#/$defs/packageName" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "error": { "description": "Set when the last fetch failed; the cards are the last good ones.", "type": "string", "maxLength": 200 },
+    "cards": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/card" } }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "feedId": { "type": "string", "pattern": "^[a-z0-9_-]+(\\.[a-z0-9_-]+)+$", "maxLength": 80 },
+    "packageName": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+$" },
+    "image": {
+      "description": "https or http URL, content:// or android.resource:// URI from an app on the TV, or media:sha256-<hex> on the BanditBox server.",
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^(https?://|content://|android\\.resource://|media:sha256-[0-9a-f]{64}$)"
+    },
+    "link": {
+      "description": "What the card opens: an intent URI (intent:#Intent;...;end) or any URI an app handles, such as bingebandit://play/42.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "action": {
+      "type": "object",
+      "required": ["label", "link"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 30 },
+        "link": { "$ref": "#/$defs/link" }
+      },
+      "additionalProperties": false
+    },
+    "card": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 120 },
+        "subtitle": { "type": "string", "maxLength": 200 },
+        "image": { "$ref": "#/$defs/image" },
+        "imageAspect": { "description": "Width over height of the image. Posters are 0.67, banners and stills 1.78.", "type": "number", "minimum": 0.25, "maximum": 4 },
+        "progress": { "description": "How far through, 0 to 1.", "type": "number", "minimum": 0, "maximum": 1 },
+        "badge": { "description": "A short label on the card, such as LIVE or NEW.", "type": "string", "maxLength": 12 },
+        "link": { "$ref": "#/$defs/link" },
+        "package": { "$ref": "#/$defs/packageName" },
+        "actions": { "description": "Long-press actions.", "type": "array", "maxItems": 3, "items": { "$ref": "#/$defs/action" } },
+        "stat": { "$ref": "#/$defs/stat" },
+        "weather": { "$ref": "#/$defs/weather" },
+        "score": { "$ref": "#/$defs/score" }
+      },
+      "additionalProperties": false
+    },
+    "stat": {
+      "type": "object",
+      "required": ["value"],
+      "properties": {
+        "value": { "type": "string", "maxLength": 16 },
+        "unit": { "type": "string", "maxLength": 12 },
+        "trend": { "enum": ["up", "down", "flat"] }
+      },
+      "additionalProperties": false
+    },
+    "weatherIcon": { "enum": ["clear", "partly-cloudy", "cloudy", "fog", "drizzle", "rain", "sleet", "snow", "thunder"] },
+    "weather": {
+      "type": "object",
+      "required": ["temp", "unit", "icon"],
+      "properties": {
+        "temp": { "type": "number" },
+        "unit": { "enum": ["°F", "°C"] },
+        "icon": { "$ref": "#/$defs/weatherIcon" },
+        "isDay": { "type": "boolean" },
+        "label": { "type": "string", "maxLength": 40 },
+        "high": { "type": "number" },
+        "low": { "type": "number" },
+        "precipChance": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "alert": { "description": "The most severe active alert, such as Wind Advisory.", "type": "string", "maxLength": 80 },
+        "days": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": ["day", "icon", "high", "low"],
+            "properties": {
+              "day": { "type": "string", "maxLength": 12 },
+              "icon": { "$ref": "#/$defs/weatherIcon" },
+              "high": { "type": "number" },
+              "low": { "type": "number" },
+              "precipChance": { "type": "integer", "minimum": 0, "maximum": 100 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "team": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "maxLength": 60 },
+        "abbr": { "type": "string", "maxLength": 8 },
+        "score": { "type": ["string", "null"], "maxLength": 8 },
+        "logo": { "$ref": "#/$defs/image" },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "rank": { "type": ["integer", "null"], "minimum": 1, "maximum": 99 },
+        "record": { "type": "string", "maxLength": 16 },
+        "winner": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "score": {
+      "type": "object",
+      "required": ["state", "home", "away"],
+      "properties": {
+        "state": { "description": "pre: not started. in: live. post: final.", "enum": ["pre", "in", "post"] },
+        "home": { "$ref": "#/$defs/team" },
+        "away": { "$ref": "#/$defs/team" },
+        "detail": { "description": "Clock and period, the start time, or Final.", "type": "string", "maxLength": 40 },
+        "startsAt": { "type": "string", "format": "date-time" },
+        "broadcast": { "type": "string", "maxLength": 30 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

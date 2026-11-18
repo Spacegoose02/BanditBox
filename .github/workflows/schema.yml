@@ -47,6 +47,18 @@ jobs:
             fi
           done
           exit $status
+      - name: Widget feed examples pass
+        run: check-jsonschema --schemafile widget-feed.schema.json examples/widget-feed/*.json
+      - name: Invalid widget feeds fail
+        run: |
+          status=0
+          for f in examples/widget-feed/invalid/*.json; do
+            if check-jsonschema --schemafile widget-feed.schema.json "$f" > /dev/null 2>&1; then
+              echo "::error file=schema/$f::expected this feed to be rejected"
+              status=1
+            fi
+          done
+          exit $status
       - name: Backup examples pass
         run: check-jsonschema --base-uri "file://$PWD/backup.schema.json" --schemafile backup.schema.json examples/backup/*.json
       - name: Invalid backups fail
