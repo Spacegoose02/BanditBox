@@ -56,17 +56,28 @@ enum class ScreensaverType(val id: String) {
     OLED_DRIFT("oled-drift"),
     OLED_STARFIELD("oled-starfield"),
     OLED_BLACK("oled-black"),
+
+    /** Ambient mode: pictures from a widget feed (Immich, Plex), one after another. */
+    PHOTOS("photos"),
     ;
 
-    /** True for the screensavers the launcher draws itself. */
+    /** True for the black, burn-in safe screensavers. */
     val isOled: Boolean get() = id.startsWith("oled-")
+
+    /** True for the screensavers the launcher draws itself. */
+    val drawnByLauncher: Boolean get() = isOled || this == PHOTOS
 
     companion object {
         fun parse(raw: String?): ScreensaverType = entries.firstOrNull { it.id == raw } ?: SYSTEM
     }
 }
 
-data class ScreensaverSpec(val type: ScreensaverType, val timeoutMin: Int) {
+data class ScreensaverSpec(
+    val type: ScreensaverType,
+    val timeoutMin: Int,
+    /** [ScreensaverType.PHOTOS]: the widget feed to show. */
+    val feed: String? = null,
+) {
     companion object {
         const val DEFAULT_TIMEOUT_MIN = 10
     }
@@ -147,6 +158,7 @@ object ThemeResolver {
             screensaver = ScreensaverSpec(
                 type = ScreensaverType.parse(saver?.type),
                 timeoutMin = (saver?.timeoutMin ?: ScreensaverSpec.DEFAULT_TIMEOUT_MIN).coerceIn(1, 120),
+                feed = saver?.feed?.takeIf(WidgetFeeds::isFeedId),
             ),
         )
     }

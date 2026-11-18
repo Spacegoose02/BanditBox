@@ -102,7 +102,8 @@
           "required": ["type"],
           "additionalProperties": false,
           "properties": {
-            "type": { "type": "string", "enum": ["none", "system", "oled-drift", "oled-starfield", "oled-black"], "description": "system leaves it to Android. The oled- types are drawn by the launcher on black with nothing held in place: oled-drift moves a dim clock every minute, oled-starfield is a slow star field, oled-black is plain black." },
+            "type": { "type": "string", "enum": ["none", "system", "oled-drift", "oled-starfield", "oled-black", "photos"], "description": "system leaves it to Android. The oled- types are drawn by the launcher on black with nothing held in place: oled-drift moves a dim clock every minute, oled-starfield is a slow star field, oled-black is plain black. photos is ambient mode: the pictures of the widget feed named in feed (for example immich.photos), one after another, with the time." },
+            "feed": { "type": "string", "pattern": "^[a-z0-9_-]+(\\.[a-z0-9_-]+)+$", "maxLength": 128, "description": "photos only: the widget feed whose pictures to show." },
             "timeoutMin": { "type": "integer", "minimum": 1, "maximum": 120, "default": 10, "description": "Minutes without a button press on the launcher before the screensaver starts." }
           }
         }

@@ -43,6 +43,11 @@
     <string name="screensaver_drift">OLED: drifting clock</string>
     <string name="screensaver_starfield">OLED: star field</string>
     <string name="screensaver_black">OLED: black</string>
+    <string name="screensaver_photos">Photos (ambient mode)</string>
+    <string name="screensaver_photos_from">Photos from: %1$s</string>
+    <string name="screensaver_photos_pick">Show photos from</string>
+    <string name="screensaver_photos_hint">A new set of photos comes from the server every hour.</string>
+    <string name="screensaver_photos_none">No photos yet. On the BanditBox server, add Immich photos or Plex photos under Integrations, and they show up here.</string>
     <string name="screensaver_after">Start after: %1$d min</string>
     <string name="screensaver_after_title">Start after</string>
     <string name="minutes">%1$d minutes</string>

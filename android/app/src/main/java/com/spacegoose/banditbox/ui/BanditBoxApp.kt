@@ -71,6 +71,7 @@ import com.spacegoose.banditbox.layout.Profiles
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
+import com.spacegoose.banditbox.layout.ScreensaverType
 import com.spacegoose.banditbox.layout.Startup
 import com.spacegoose.banditbox.layout.ThemeResolver
 import com.spacegoose.banditbox.layout.WallpaperRef
@@ -578,7 +579,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             screensaverOn = false
             return@LaunchedEffect
         }
-        if (!saver.type.isOled || screensaverOn) return@LaunchedEffect
+        if (!saver.type.drawnByLauncher || screensaverOn) return@LaunchedEffect
         delay(saver.timeoutMin * 60_000L)
         overlay = null // nothing may stay on screen behind (or above) it
         openFolderId = null
@@ -990,6 +991,8 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                         profiles = profilesView,
                         launchOnBoot = launchOnBoot,
                         deps = deps,
+                        photoFeeds = widgetState.feeds.keys.sorted().mapNotNull(widgetState::feed)
+                            .filter { feed -> feed.cards.any { it.image != null } },
                         show = { overlay = it },
                         edit = edit,
                         startMove = { rowId, item, label ->
@@ -1013,7 +1016,13 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             }
         }
     }
-    if (screensaverOn) OledScreensaver(saver.type, MaterialTheme.colorScheme.primary)
+    if (screensaverOn) {
+        if (saver.type == ScreensaverType.PHOTOS) {
+            PhotoScreensaver(saver.feed?.let(widgetState::feed)?.cards.orEmpty(), widgetState.image, MaterialTheme.colorScheme.primary)
+        } else {
+            OledScreensaver(saver.type, MaterialTheme.colorScheme.primary)
+        }
+    }
     }
     }
 }
