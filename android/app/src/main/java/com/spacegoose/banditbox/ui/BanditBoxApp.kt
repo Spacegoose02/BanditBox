@@ -74,7 +74,7 @@ class LauncherDeps(
     val onAppAction: (AppEntry, AppMenuAction) -> Unit,
 )
 
-private enum class Screen { HOME, ALL_APPS, EDIT_ROWS, PICK_PROFILE }
+private enum class Screen { HOME, ALL_APPS, EDIT_ROWS, PICK_PROFILE, HOME_SETUP }
 
 /** An item being moved along its row with the D-pad. */
 private class Moving(val rowId: String, val item: String, val label: String)
@@ -309,6 +309,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
                 )
                 Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
                 Screen.EDIT_ROWS -> RowEditor(currentDoc, edit, show = { overlay = it })
+                Screen.HOME_SETUP -> HomeSetupScreen(launch = deps.launch)
             }
 
             openFolderId?.let { id ->
@@ -363,6 +364,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int) {
                         },
                         openFolder = { openFolderId = it },
                         openEditRows = { screen = Screen.EDIT_ROWS },
+                        openHomeSetup = { screen = Screen.HOME_SETUP },
                         setLaunchOnBoot = { pkg ->
                             launchOnBoot = pkg
                             deps.settings.launchOnBoot = pkg

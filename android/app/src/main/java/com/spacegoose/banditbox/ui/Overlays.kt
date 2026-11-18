@@ -60,6 +60,7 @@ class OverlayContext(
     val startMove: (rowId: String, item: String, label: String) -> Unit,
     val openFolder: (String) -> Unit,
     val openEditRows: () -> Unit,
+    val openHomeSetup: () -> Unit,
     val setLaunchOnBoot: (String?) -> Unit,
     val profile: ProfileActions,
 )
@@ -224,6 +225,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
         choices = listOf(
             Choice(stringResource(R.string.profile_settings, ctx.doc.profile.name)) { ctx.show(Overlay.ProfileSettings) },
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
+            Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
             Choice(stringResource(R.string.hidden_apps)) { ctx.show(Overlay.HiddenApps) },
             Choice(stringResource(R.string.android_settings)) { close(); ctx.deps.launch(SystemShortcuts.androidSettings) },
             Choice(stringResource(R.string.network_settings)) { close(); ctx.deps.launch(SystemShortcuts.network) },
