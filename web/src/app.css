@@ -181,3 +181,13 @@ th {
 		padding: 0.2rem 0;
 	}
 }
+
+a.button {
+	display: inline-block;
+	text-decoration: none;
+	border-radius: 8px;
+	padding: 0.55rem 1rem;
+	border: 1px solid var(--line);
+	background: var(--panel-2);
+	color: var(--text);
+}
