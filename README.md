@@ -66,7 +66,13 @@ curl localhost:8686/api/v1/health
 | --- | --- | --- |
 | `BANDITBOX_ADDR` | `:8686` | Listen address |
 | `BANDITBOX_DATA` | `/config` | Data folder: `banditbox.db` (SQLite) and media |
+| `BANDITBOX_MDNS` | `on` | `off` stops advertising `_banditbox._tcp` on the LAN |
+| `BANDITBOX_NAME` | `BanditBox` | Name TVs see when they find the server |
+| `BANDITBOX_ADVERTISE_IP` | the machine's LAN addresses | IPv4 address(es) to advertise, comma-separated |
+| `BANDITBOX_ADVERTISE_PORT` | the port in `BANDITBOX_ADDR` | Port to advertise, if the LAN reaches the server on a different one |
 
 On first start the server creates the database and a **Home** profile (`p_default`, the same id the TV starts with). Layout documents are checked against `schema/layout.schema.json`, which is embedded in the binary: after changing a schema, run `go generate ./...` in `server/` (CI fails if the copy is out of date).
+
+**Finding the server:** TVs browse for `_banditbox._tcp` over mDNS. Multicast only reaches the LAN when the container uses host networking or has its own LAN address (Unraid's `br0`); on Docker's default bridge, type the server's address on the TV instead. The responder shares udp/5353 with avahi, so host networking on Unraid works.
 
 **First sign-in:** while no admin exists, the server prints a one-time **setup code** in its log (`docker logs banditbox` or the Unraid container log). The web UI asks for it with the admin's username and password, so only someone who can read the log can claim the server. Sessions last 30 days from last use; five wrong passwords in 15 minutes pause sign-in from that address.
