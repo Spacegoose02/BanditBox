@@ -18,6 +18,7 @@ import com.spacegoose.banditbox.layout.ProfileSummary
 import com.spacegoose.banditbox.layout.Remap
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
+import com.spacegoose.banditbox.system.BackupSource
 import com.spacegoose.banditbox.system.SystemShortcuts
 import com.spacegoose.banditbox.system.TvInput
 
@@ -49,7 +50,21 @@ sealed interface Overlay {
     data class PickAction(val key: String, val press: Press) : Overlay
     data class PickApp(val key: String, val press: Press) : Overlay
     data class PickInput(val key: String, val press: Press) : Overlay
+
+    data object Backup : Overlay
+    class PickBackup(val sources: List<BackupSource>) : Overlay
+    class Message(val title: String, val message: String) : Overlay
 }
+
+/** Backup and restore, run by the launcher because restoring replaces every profile. */
+class BackupActions(
+    val hasFilePicker: Boolean,
+    val backUpNow: () -> Unit,
+    val saveToFile: () -> Unit,
+    val showRestore: () -> Unit,
+    val chooseFile: () -> Unit,
+    val restore: (BackupSource) -> Unit,
+)
 
 /** What the profile dialogs can ask the launcher to do. */
 class ProfileActions(
@@ -75,6 +90,7 @@ class OverlayContext(
     val openHomeSetup: () -> Unit,
     val setLaunchOnBoot: (String?) -> Unit,
     val profile: ProfileActions,
+    val backup: BackupActions,
 )
 
 @Composable
@@ -128,6 +144,14 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
         is Overlay.PickAction -> PickActionDialog(overlay.key, overlay.press, ctx)
         is Overlay.PickApp -> PickAppDialog(overlay.key, overlay.press, ctx)
         is Overlay.PickInput -> PickInputDialog(overlay.key, overlay.press, ctx)
+        Overlay.Backup -> BackupDialog(ctx)
+        is Overlay.PickBackup -> PickBackupDialog(overlay.sources, ctx)
+        is Overlay.Message -> ChoiceDialog(
+            title = overlay.title,
+            choices = listOf(Choice(stringResource(R.string.ok)) { close() }),
+            onDismiss = close,
+            message = overlay.message,
+        )
     }
 }
 
@@ -247,6 +271,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
             Choice(stringResource(R.string.edit_rows)) { close(); ctx.openEditRows() },
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
             Choice(stringResource(R.string.buttons)) { ctx.show(Overlay.Buttons) },
+            Choice(stringResource(R.string.backup)) { ctx.show(Overlay.Backup) },
             Choice(stringResource(R.string.hidden_apps)) { ctx.show(Overlay.HiddenApps) },
             Choice(stringResource(R.string.android_settings)) { close(); ctx.deps.launch(SystemShortcuts.androidSettings) },
             Choice(stringResource(R.string.network_settings)) { close(); ctx.deps.launch(SystemShortcuts.network) },
@@ -340,4 +365,32 @@ private fun HiddenAppsDialog(ctx: OverlayContext) {
         }
     }
     ChoiceDialog(title = stringResource(R.string.hidden_apps_title), choices = choices, onDismiss = close)
+}
+
+@Composable
+private fun BackupDialog(ctx: OverlayContext) {
+    val close = { ctx.show(null) }
+    val choices = buildList {
+        add(Choice(stringResource(R.string.backup_now)) { close(); ctx.backup.backUpNow() })
+        if (ctx.backup.hasFilePicker) add(Choice(stringResource(R.string.backup_to_file)) { close(); ctx.backup.saveToFile() })
+        add(Choice(stringResource(R.string.backup_restore)) { close(); ctx.backup.showRestore() })
+    }
+    ChoiceDialog(title = stringResource(R.string.backup), choices = choices, onDismiss = close)
+}
+
+/** Backups found on the TV, newest first, plus the file picker where there is one. */
+@Composable
+private fun PickBackupDialog(sources: List<BackupSource>, ctx: OverlayContext) {
+    val close = { ctx.show(null) }
+    val choices = buildList {
+        sources.forEach { source -> add(Choice(source.name) { close(); ctx.backup.restore(source) }) }
+        if (ctx.backup.hasFilePicker) add(Choice(stringResource(R.string.backup_choose_file)) { close(); ctx.backup.chooseFile() })
+        if (isEmpty()) add(Choice(stringResource(R.string.ok)) { close() })
+    }
+    ChoiceDialog(
+        title = stringResource(R.string.backup_pick),
+        choices = choices,
+        onDismiss = { ctx.show(Overlay.Backup) },
+        message = if (sources.isEmpty()) stringResource(R.string.backup_none) else null,
+    )
 }

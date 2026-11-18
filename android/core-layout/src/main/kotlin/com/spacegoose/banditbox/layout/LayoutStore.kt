@@ -52,10 +52,12 @@ class LayoutStore(private val dir: File) {
         return File(dir, profileId + SUFFIX)
     }
 
-    private companion object {
-        const val SUFFIX = ".json"
+    companion object {
+        private const val SUFFIX = ".json"
 
         /** Same rule as the schema's id, which also keeps ids safe as file names. */
-        val ID = Regex("^[A-Za-z0-9_-]{1,64}$")
+        private val ID = Regex("^[A-Za-z0-9_-]{1,64}$")
+
+        fun isValidId(profileId: String): Boolean = ID.matches(profileId)
     }
 }

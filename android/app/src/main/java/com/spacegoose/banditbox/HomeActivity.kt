@@ -54,6 +54,7 @@ class HomeActivity : ComponentActivity() {
             launch = ::launchFirst,
             onAppAction = ::handle,
             onRemapsChanged = { (application as BanditBoxApplication).updateRemaps(it) },
+            restart = ::recreate,
         )
         if (savedInstanceState == null) request = showRequest(intent)
         setContent {

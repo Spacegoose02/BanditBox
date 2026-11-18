@@ -5,6 +5,7 @@ JSON Schemas (draft 2020-12) shared by the TV app and the server. They are the s
 | File | What it describes |
 | --- | --- |
 | `layout.schema.json` | The layout document: one per profile, holding everything the TV shows |
+| `backup.schema.json` | A backup file: every profile's layout document, as made by Settings > Backup on the TV |
 
 `examples/` holds documents that must validate, and `examples/invalid/` holds documents that must be rejected. CI checks both, and the TV app's `core-layout` tests decode the same files.
 
@@ -17,3 +18,9 @@ JSON Schemas (draft 2020-12) shared by the TV app and the server. They are the s
 - The TV reads leniently (unknown optional fields are ignored) so an older TV keeps working with a newer server. Anything that would break an older reader bumps `schema`.
 
 Validate locally with `pipx run check-jsonschema --schemafile layout.schema.json examples/*.json`.
+
+`backup.schema.json` refers to `layout.schema.json` by a relative `$ref`, so point the base URI at this folder to resolve it without the network:
+
+```
+check-jsonschema --base-uri "file://$PWD/backup.schema.json" --schemafile backup.schema.json examples/backup/*.json
+```

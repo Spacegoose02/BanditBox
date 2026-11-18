@@ -2,7 +2,10 @@ package com.spacegoose.banditbox.ui
 
 import android.content.Intent
 import android.util.Log
+import android.content.ActivityNotFoundException
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -29,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import com.spacegoose.banditbox.BuildConfig
 import com.spacegoose.banditbox.DeviceSettings
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.RemapActions
@@ -36,7 +40,10 @@ import com.spacegoose.banditbox.apps.AppEntry
 import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.AppVisuals
+import com.spacegoose.banditbox.layout.Backup
+import com.spacegoose.banditbox.layout.BackupFile
 import com.spacegoose.banditbox.layout.DefaultLayout
+import com.spacegoose.banditbox.layout.InvalidBackupException
 import com.spacegoose.banditbox.layout.LayoutDocument
 import com.spacegoose.banditbox.layout.LayoutEdits
 import com.spacegoose.banditbox.layout.LayoutResolver
@@ -50,6 +57,8 @@ import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
 import com.spacegoose.banditbox.layout.Startup
 import com.spacegoose.banditbox.layout.summary
+import com.spacegoose.banditbox.system.BackupFiles
+import com.spacegoose.banditbox.system.BackupSource
 import com.spacegoose.banditbox.system.SystemShortcuts
 import com.spacegoose.banditbox.system.TvInput
 import com.spacegoose.banditbox.system.passthroughInputs
@@ -62,6 +71,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
 /** What the launcher needs from the activity. */
@@ -77,6 +87,8 @@ class LauncherDeps(
     val onAppAction: (AppEntry, AppMenuAction) -> Unit,
     /** The open profile's remote button rules changed; the BanditBox service applies them. */
     val onRemapsChanged: (List<Remap>) -> Unit,
+    /** Starts the launcher over, reading every profile from disk again (after a restore). */
+    val restart: () -> Unit,
 )
 
 /** A remote button shortcut asked for a screen. [id] tells two requests for the same screen apart. */
@@ -216,6 +228,152 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
                 }
             }
         },
+    )
+
+    // ---- Backup and restore ----
+    val backupFiles = remember { BackupFiles(context) }
+    var pickedFileName by remember { mutableStateOf("") }
+
+    fun message(title: String, text: String) {
+        overlay = Overlay.Message(title, text)
+    }
+
+    /** Every profile as one backup, including an edit that hasn't reached the disk yet. Call on Dispatchers.IO. */
+    suspend fun backupText(): String = storeLock.withLock {
+        doc?.let { if (it.profileId !in deletedIds) deps.store.save(it) }
+        Backup.encode(Backup.create(deps.store, Instant.now().toString(), BuildConfig.VERSION_NAME))
+    }
+
+    val saveFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(BackupFiles.MIME)) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    backupFiles.writeTo(uri, backupText())
+                    true
+                } catch (e: IOException) {
+                    Log.w("BanditBox", "Couldn't write backup", e)
+                    false
+                }
+            }
+            if (ok) {
+                message(
+                    context.getString(R.string.backup_done_title),
+                    context.getString(R.string.backup_done, pickedFileName, context.getString(R.string.backup_place_file)),
+                )
+            } else {
+                message(context.getString(R.string.backup), context.getString(R.string.backup_failed))
+            }
+        }
+    }
+
+    fun restoreNow(backup: BackupFile) {
+        scope.launch {
+            // null: restored. Otherwise the reason, and whether profiles on disk already changed.
+            val failure: Pair<String, Boolean>? = withContext(Dispatchers.IO) {
+                storeLock.withLock {
+                    val savedCopy = try {
+                        val before = Backup.encode(Backup.create(deps.store, Instant.now().toString(), BuildConfig.VERSION_NAME))
+                        backupFiles.save(backupFiles.newName("before-restore"), before, alsoToDownloads = false) != BackupFiles.Saved.NOWHERE
+                    } catch (e: IOException) {
+                        Log.w("BanditBox", "Couldn't save a copy before restoring", e)
+                        false
+                    }
+                    if (!savedCopy) return@withLock context.getString(R.string.backup_failed) to false
+                    // No save from before the restore may land after it.
+                    deletedIds += deps.store.profileIds()
+                    deletedIds += backup.layouts.map { it.profileId }
+                    try {
+                        Backup.restore(deps.store, backup)
+                        null
+                    } catch (e: IOException) {
+                        Log.w("BanditBox", "Restore failed", e)
+                        (e.message ?: e.toString()) to true
+                    }
+                }
+            }
+            if (failure == null || failure.second) {
+                deps.restart() // start over from what is on disk now
+            } else {
+                message(context.getString(R.string.backup), context.getString(R.string.backup_restore_failed, failure.first))
+            }
+        }
+    }
+
+    fun askToRestore(source: BackupSource) {
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    Result.success(Backup.decode(source.read()))
+                } catch (e: InvalidBackupException) {
+                    Result.failure<BackupFile>(e)
+                } catch (e: IOException) {
+                    Result.failure<BackupFile>(e)
+                }
+            }
+            result.fold(
+                onSuccess = { backup ->
+                    val title = context.getString(R.string.backup_restore_confirm, backup.layouts.size, backup.createdAt.take(10))
+                    overlay = Overlay.Confirm(title, context.getString(R.string.backup_restore_action)) { restoreNow(backup) }
+                },
+                onFailure = { e ->
+                    message(context.getString(R.string.backup), context.getString(R.string.backup_restore_failed, e.message ?: e.toString()))
+                },
+            )
+        }
+    }
+
+    val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) askToRestore(BackupSource(uri.lastPathSegment.orEmpty()) { backupFiles.readFrom(uri) })
+    }
+
+    val backupActions = BackupActions(
+        hasFilePicker = backupFiles.hasFilePicker,
+        backUpNow = {
+            scope.launch {
+                val name = backupFiles.newName()
+                val saved = withContext(Dispatchers.IO) {
+                    try {
+                        backupFiles.save(name, backupText())
+                    } catch (e: IOException) {
+                        Log.w("BanditBox", "Couldn't make backup", e)
+                        BackupFiles.Saved.NOWHERE
+                    }
+                }
+                val place = when (saved) {
+                    BackupFiles.Saved.DOWNLOADS_AND_APP, BackupFiles.Saved.DOWNLOADS_ONLY -> R.string.backup_place_downloads
+                    BackupFiles.Saved.APP_ONLY -> R.string.backup_place_app
+                    BackupFiles.Saved.NOWHERE -> null
+                }
+                if (place == null) {
+                    message(context.getString(R.string.backup), context.getString(R.string.backup_failed))
+                } else {
+                    message(context.getString(R.string.backup_done_title), context.getString(R.string.backup_done, name, context.getString(place)))
+                }
+            }
+        },
+        saveToFile = {
+            pickedFileName = backupFiles.newName()
+            try {
+                saveFile.launch(pickedFileName)
+            } catch (_: ActivityNotFoundException) {
+                message(context.getString(R.string.backup), context.getString(R.string.backup_failed))
+            }
+        },
+        showRestore = {
+            scope.launch {
+                val sources = withContext(Dispatchers.IO) { backupFiles.list() }
+                overlay = Overlay.PickBackup(sources)
+            }
+        },
+        chooseFile = {
+            try {
+                openFile.launch(arrayOf(BackupFiles.MIME, "text/plain", "application/octet-stream"))
+            } catch (_: ActivityNotFoundException) {
+                message(context.getString(R.string.backup), context.getString(R.string.cannot_open))
+            }
+        },
+        restore = ::askToRestore,
     )
 
     LaunchedEffect(homePresses) {
@@ -400,6 +558,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?) {
                             deps.settings.launchOnBoot = pkg
                         },
                         profile = profileActions,
+                        backup = backupActions,
                     ),
                 )
             }
