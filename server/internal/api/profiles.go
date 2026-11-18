@@ -68,6 +68,7 @@ func (s *server) createProfile(w http.ResponseWriter, r *http.Request, _ store.A
 	if s.layoutError(w, r, err) {
 		return
 	}
+	s.Hub.Publish(l.ProfileID, l.Version)
 	writeLayout(w, http.StatusCreated, l)
 }
 
@@ -111,6 +112,7 @@ func (s *server) putLayout(w http.ResponseWriter, r *http.Request, _ store.Admin
 	if s.layoutError(w, r, err) {
 		return
 	}
+	s.Hub.Publish(l.ProfileID, l.Version)
 	writeLayout(w, http.StatusOK, l)
 }
 

@@ -1,0 +1,53 @@
+# Server API (v1)
+
+Everything is JSON under `/api/v1`. Errors look like `{"error": "..."}`.
+
+## Who can call what
+
+| Caller | How it authenticates |
+| --- | --- |
+| Web UI (admin) | `bb_session` cookie from `/auth/setup` or `/auth/login` |
+| TV | `Authorization: Bearer <device token>` from pairing. Optional `X-BanditBox-App: <app version>` |
+| Anyone | `/health`, `/auth/status`, `/pair/start`, `/pair/{pairId}` |
+
+## Admin
+
+| Method and path | Body | Reply |
+| --- | --- | --- |
+| `GET /auth/status` | | `{setupNeeded, admin}` |
+| `POST /auth/setup` | `{code, username, password}` (code from the server log) | 201, sets cookie |
+| `POST /auth/login` | `{username, password}` | 200, sets cookie. 429 after 5 failures in 15 min |
+| `POST /auth/logout` | | 204 |
+| `POST /auth/password` | `{current, new}` | 204. Other sessions are signed out |
+| `GET /profiles` | | `[{id, name, version, updated}]` |
+| `POST /profiles` | `{id, name, copyFrom?}` | 201, the new layout |
+| `GET /profiles/{id}/layout` | | the layout document |
+| `PUT /profiles/{id}/layout` | the edited document; its `version` is the one it was edited from | 200 new document, or 409 `{error, current}` |
+| `GET /profiles/{id}/history` | | earlier documents, newest first (up to 50) |
+| `DELETE /profiles/{id}` | | 204. The last profile can't be deleted |
+| `GET /pair/pending` | | TVs waiting: `[{code, name, model, created, expires}]` |
+| `POST /pair/approve` | `{code, name?, profiles}` (`[]` = all profiles) | 201, the device |
+| `POST /pair/deny` | `{code}` | 204 |
+| `GET /devices` | | `[{id, name, model, profiles, created, lastSeen, appVersion}]` |
+| `PATCH /devices/{id}` | `{name?, profiles?}` | the device |
+| `DELETE /devices/{id}` | | 204. The token stops working and its stream closes |
+
+## TV
+
+### Pairing
+
+1. `POST /pair/start {name, model}` → `{pairId, code, qrUrl, expiresAt}`. Show `code` and a QR code of `qrUrl`. Keep `pairId` secret.
+2. Poll `GET /pair/{pairId}?wait=30` until `status` is not `pending`:
+   - `approved` with `{deviceId, token}`. This is sent **once**; store the token encrypted.
+   - `denied` or `expired`: start again. 404 means the server forgot it (for example after a restart).
+
+### Sync
+
+- `GET /device/me` → `{device, profiles: [{id, name, version, updated}], server}`. 401 means the TV was revoked: keep the last layout and show "not synced".
+- `GET /sync/layout?profile=ID&since=V` → `{profileId, version, doc}`, or 204 if `V` is current.
+- `POST /sync/ops {profileId, baseVersion, ops}` → `{version, applied: [opId], rejected: [{opId, reason, detail?}], doc}`.
+  - Ops follow `schema/op.schema.json`. Up to 500 per batch. Retrying a batch is safe: applied op ids are remembered for 30 days.
+  - `reason` is `changed in the web UI`, `changed later on another TV`, `stale`, or `invalid`. Show a short notice for the first two.
+  - `doc` is the layout after the batch: replace the local copy with it, then re-apply any ops queued since.
+  - 409 means `baseVersion` is newer than the server's (the server was restored from a backup): fetch the layout and drop the queue.
+- `GET /sync/stream` (WebSocket, open only while the launcher is in front). On connect the server sends `{"type":"version","profileId","version"}` for each allowed profile, then one whenever a profile changes. Fetch the layout when the version is newer than yours. The server pings every 30 s. Close code 4401 means the TV was revoked.
