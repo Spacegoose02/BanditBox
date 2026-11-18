@@ -77,11 +77,14 @@
     <string name="home_service_on">✓ The BanditBox Home button service is on.</string>
     <string name="home_service_off">✗ The BanditBox Home button service is off.</string>
     <string name="home_setup_steps">On Google TV (onn 4K): open Accessibility settings, choose \"BanditBox Home button\", and turn it on. On Nvidia Shield: open Home app settings and choose BanditBox, or turn on the service.</string>
+    <string name="home_setup_restricted">If the switch won\'t turn on or is greyed out (Android 13 and later block this for apps installed outside the Play Store): open BanditBox\'s app info, choose ⋮ and then Allow restricted settings, and try the switch again.</string>
+    <string name="open_app_info">BanditBox app info</string>
     <string name="open_accessibility_settings">Accessibility settings</string>
     <string name="open_home_settings">Home app settings</string>
     <string name="adb_title">ADB commands (optional, for power users)</string>
     <string name="adb_intro">Run these from a computer with ADB connected to this TV.</string>
     <string name="adb_set_home">Make BanditBox the default Home app (Shield and stock Android TV):</string>
+    <string name="adb_allow_restricted">If the switch is greyed out or won\'t turn on, allow restricted settings first:</string>
     <string name="adb_enable_service">Turn on the Home button service. This replaces any other accessibility services you have on:</string>
     <string name="adb_enable_accessibility">Then switch accessibility on:</string>
     <string name="adb_disable_stock">Advanced: disable the stock launcher. This also hides its recommendations and may affect some system screens:</string>
