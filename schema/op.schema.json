@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://banditbox.dev/schema/op.schema.json",
+  "title": "BanditBox sync op",
+  "description": "One change to a profile's layout document, made on a TV and sent to the server with POST /api/v1/sync/ops. See schema/README.md for how paths address the document.",
+  "type": "object",
+  "required": ["opId", "hlc", "kind", "path"],
+  "additionalProperties": false,
+  "properties": {
+    "opId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{8,64}$",
+      "description": "Unique id made by the TV. Sending the same op twice applies it once."
+    },
+    "deviceId": {
+      "type": "string",
+      "description": "Filled in by the server from the device token. Ignored if a TV sends it."
+    },
+    "hlc": {
+      "type": "string",
+      "pattern": "^[0-9]{13}-[0-9]{5}$",
+      "description": "Hybrid logical clock: Unix milliseconds and a counter, zero-padded so the strings sort in time order."
+    },
+    "kind": { "enum": ["set", "insert", "move", "delete"] },
+    "path": {
+      "type": "string",
+      "pattern": "^(/[^/]+)+$",
+      "description": "Where the change applies, for example /profile/name or /rows/favorites/items. Elements of id-keyed arrays (rows, folders) are addressed by id."
+    },
+    "value": { "description": "The new value, for set and insert." },
+    "after": {
+      "type": ["string", "null"],
+      "description": "For insert and move into an id-keyed array: the id to place the element after, or null for the start."
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "kind": { "enum": ["set", "insert"] } } }, "then": { "required": ["value"] } },
+    { "if": { "properties": { "kind": { "enum": ["insert", "move"] } } }, "then": { "required": ["after"] } },
+    { "if": { "properties": { "kind": { "enum": ["move", "delete"] } } }, "then": { "not": { "required": ["value"] } } }
+  ]
+}
