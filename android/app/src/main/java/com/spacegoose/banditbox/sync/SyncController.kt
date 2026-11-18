@@ -65,6 +65,55 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
     private val _status = MutableStateFlow(statusOf(states.load()))
     val status: StateFlow<Status> = _status.asStateFlow()
 
+    // --- Widget feeds from the server's connectors ----------------------------------------------
+
+    private val widgetCache = WidgetCache(File(dir, "widgets.json"))
+    private val _widgets = MutableStateFlow(WidgetSnapshot.EMPTY)
+
+    /** The server's widget feeds, as last fetched. Empty when not signed in. */
+    val widgets: StateFlow<WidgetSnapshot> = _widgets.asStateFlow()
+    private val widgetLock = Mutex()
+
+    /** Fetches the widget feeds, unless [onlyIfBehind] and the cached ones are at least [version]. */
+    private fun fetchWidgets(version: Long = 0, onlyIfBehind: Boolean = false) {
+        scope.launch {
+            widgetLock.withLock {
+                if (onlyIfBehind && _widgets.value.version >= version) return@withLock
+                val s = states.load()
+                if (!s.signedIn || s.revoked) return@withLock
+                try {
+                    val snap = api(s).widgets()
+                    if (snap != _widgets.value) {
+                        _widgets.value = snap
+                        widgetCache.save(snap)
+                    }
+                } catch (e: IOException) {
+                    Log.i("BanditBox", "Couldn't fetch widgets: ${e.message}")
+                } catch (e: ServerException) {
+                    // An older server without widgets answers 404: nothing to show.
+                    Log.i("BanditBox", "Server didn't send widgets: ${e.message}")
+                } catch (_: RevokedException) {
+                } catch (e: Exception) {
+                    Log.w("BanditBox", "Unreadable widget feeds", e)
+                }
+            }
+        }
+    }
+
+    /** Where a media:sha256-<hex> picture is on the server, or null when not signed in. */
+    fun mediaUrl(sha256: String): String? = _status.value.serverUrl?.let { it.trimEnd('/') + "/api/v1/media/" + sha256 }
+
+    /** The Authorization header for [url] when it is a picture on this TV's server, else null. */
+    fun mediaAuth(url: String): String? {
+        val base = _status.value.serverUrl?.trimEnd('/') ?: return null
+        if (!url.startsWith("$base/api/v1/media/")) return null
+        val token = mediaToken ?: vault.token()?.also { mediaToken = it } ?: return null
+        return "Bearer $token"
+    }
+
+    /** The token, decrypted once for pictures rather than for each one. */
+    @Volatile private var mediaToken: String? = null
+
     private val _results = MutableSharedFlow<SyncEngine.Result.Synced>(extraBufferCapacity = 16)
 
     /** Each sync that changed something; the launcher reloads what it shows. */
@@ -83,6 +132,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
 
     init {
         store.listener = SyncRecorder(queue, states::load, clock, onQueued = ::requestSync)
+        scope.launch { widgetLock.withLock { if (_widgets.value.version == 0L) _widgets.value = widgetCache.load() } }
         scope.launch {
             for (unused in wake) {
                 delay(DEBOUNCE_MS) // a burst of edits goes out as one request
@@ -108,6 +158,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
                 if (r.changed.isNotEmpty() || r.rejected.isNotEmpty() || r.renamed.isNotEmpty()) _results.emit(r)
                 reportApps()
                 scope.launch { installLock.withLock { installs.run(api()) } }
+                fetchWidgets()
                 if (foreground) openStream()
             }
             is SyncEngine.Result.Offline -> {
@@ -209,6 +260,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
             onProfiles = ::requestSync,
             onClosed = { revoked -> streamClosed(generation, revoked) },
             onInstalls = ::requestSync,
+            onWidgets = { version -> fetchWidgets(version, onlyIfBehind = true) },
         )
     }
 
@@ -280,6 +332,7 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
     private suspend fun signIn(url: String, name: String, deviceId: String?, token: String?): Boolean = lock.withLock {
         if (deviceId == null || token == null) return@withLock false
         closeStream()
+        mediaToken = null
         if (!vault.set(token)) return@withLock false
         queue.clear()
         states.save(SyncState(serverUrl = url, deviceId = deviceId, serverName = name, hlc = clock.last()))
@@ -294,7 +347,12 @@ class SyncController(context: Context, val store: LayoutStore, val storeLock: Mu
                 closeStream()
                 engine.signOut()
                 vault.set(null)
+                mediaToken = null
                 _status.value = Status()
+                widgetLock.withLock {
+                    widgetCache.clear()
+                    _widgets.value = WidgetSnapshot.EMPTY
+                }
             }
         }
     }

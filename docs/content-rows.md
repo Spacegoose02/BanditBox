@@ -6,7 +6,7 @@ Besides rows of app tiles, a profile's layout can hold rows of things to watch. 
 | --- | --- | --- |
 | `watchnext` | Continue watching: started shows, next episodes, optionally new episodes and watchlists | The Android TV **Watch Next** list in the system TvProvider |
 | `channel` | One app's preview channel, such as YouTube's Recommended | The app's **preview channel** in the TvProvider |
-| `widget` | A feed from a BanditBox plugin, such as `bingebandit.continue-watching` | The plugin host (Phase 3, not built yet; these rows are skipped for now) |
+| `widget` | A feed from a BanditBox plugin, such as `bingebandit.continue-watching` | Server connectors today (see [widgets.md](widgets.md)); apps on the TV in a later change |
 
 Options are in `schema/layout.schema.json`: `kinds`, `apps`, `limit` and `size` on `watchnext`; `package`, `channel`, `limit` and `size` on `channel`.
 

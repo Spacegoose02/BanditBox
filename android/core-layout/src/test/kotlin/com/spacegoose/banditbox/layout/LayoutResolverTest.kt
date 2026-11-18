@@ -63,7 +63,7 @@ class LayoutResolverTest {
                 Row.Channel(id = "c", packageName = "a.youtube"),
             ),
         )
-        assertEquals(listOf("w", "r1", "c"), LayoutResolver.homeRows(d, installed).map { it.id })
+        assertEquals(listOf("w", "r1", "feed", "c"), LayoutResolver.homeRows(d, installed).map { it.id })
     }
 
     @Test

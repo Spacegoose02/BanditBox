@@ -77,19 +77,31 @@ class HttpSyncApi(
         call(request("/device/installs/$sha256").post(rb).build()).close()
     }
 
+    /** Every widget feed from the server's connectors. */
+    fun widgets(): WidgetSnapshot = call(request("/widgets").get().build()).use { res ->
+        WidgetSnapshot.parse(res.body?.string() ?: throw IOException("empty reply"))
+    }
+
+    /** Where a media:sha256-<hex> picture is served. Fetch it with [authHeader]. */
+    fun mediaUrl(sha256: String): String = "$base/media/$sha256"
+
+    val authHeader: String get() = "Bearer $token"
+
     override fun deleteProfile(profileId: String) {
         call(request("/sync/profiles/$profileId").delete().build()).close()
     }
 
     /**
      * Opens the live stream while the launcher is in front. [onVersion] gets (profileId, version);
-     * [onProfiles] means the profile list changed. Close the returned socket when the launcher leaves.
+     * [onProfiles] means the profile list changed; [onWidgets] gets the widget feeds' version.
+     * Close the returned socket when the launcher leaves.
      */
     fun stream(
         onVersion: (String, Long) -> Unit,
         onProfiles: () -> Unit,
         onClosed: (revoked: Boolean) -> Unit,
         onInstalls: () -> Unit = {},
+        onWidgets: (Long) -> Unit = {},
     ): WebSocket {
         val req = request("/sync/stream").build()
         return streamClient.newWebSocket(req, object : WebSocketListener() {
@@ -103,6 +115,7 @@ class HttpSyncApi(
                     }
                     "profiles" -> onProfiles()
                     "installs" -> onInstalls()
+                    "widgets" -> (o["version"] as? JsonPrimitive)?.content?.toLongOrNull()?.let(onWidgets)
                 }
             }
 

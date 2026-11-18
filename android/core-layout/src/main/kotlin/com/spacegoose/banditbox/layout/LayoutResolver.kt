@@ -18,6 +18,11 @@ sealed interface HomeRow {
     data class Content(val row: ContentRow) : HomeRow {
         override val id: String get() = row.id
     }
+
+    /** A widget feed's cards, from a server connector or an app on the TV. */
+    data class Widget(val row: Row.Widget) : HomeRow {
+        override val id: String get() = row.id
+    }
 }
 
 data class ResolvedAppsRow(
@@ -56,8 +61,8 @@ object LayoutResolver {
 
     /**
      * Every row the home screen draws, in the document's order: resolved app rows (empty ones
-     * skipped) and content rows, which are filled in from what other apps publish on the TV.
-     * Widget rows wait for the plugin host and are left out for now.
+     * skipped), content rows, which are filled in from what other apps publish on the TV, and
+     * widget rows, whose cards come from widget feeds at draw time.
      */
     fun homeRows(doc: LayoutDocument, installed: Set<String>): List<HomeRow> {
         val apps = appsRows(doc, installed).associateBy { it.id }
@@ -66,7 +71,7 @@ object LayoutResolver {
                 is Row.Apps -> apps[row.id]?.let(HomeRow::Apps)
                 is Row.WatchNext -> HomeRow.Content(row)
                 is Row.Channel -> HomeRow.Content(row)
-                is Row.Widget -> null
+                is Row.Widget -> HomeRow.Widget(row)
             }
         }
     }
