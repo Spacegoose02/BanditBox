@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A BanditBox server runs on the home network, usually over plain HTTP (http://192.168.x.x:8686).
+     Android only allows plain HTTP when the app says so. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

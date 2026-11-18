@@ -10,7 +10,7 @@ kotlin {
 
 dependencies {
     api(project(":core-layout"))
-    implementation(libs.okhttp)
+    api(libs.okhttp) // the stream hands out an OkHttp WebSocket
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
 }

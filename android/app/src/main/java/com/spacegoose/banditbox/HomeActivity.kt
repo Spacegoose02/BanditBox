@@ -18,13 +18,11 @@ import com.spacegoose.banditbox.apps.AppIndex
 import com.spacegoose.banditbox.apps.AppMenuAction
 import com.spacegoose.banditbox.apps.AppVisuals
 import com.spacegoose.banditbox.content.TvProviderReader
-import com.spacegoose.banditbox.layout.LayoutStore
 import com.spacegoose.banditbox.ui.BanditBoxApp
 import com.spacegoose.banditbox.ui.LauncherDeps
 import com.spacegoose.banditbox.ui.Posters
 import com.spacegoose.banditbox.ui.ShowRequest
 import com.spacegoose.banditbox.ui.theme.BanditBoxTheme
-import java.io.File
 
 /**
  * The single activity. Registered as HOME, so pressing Home lands here.
@@ -49,10 +47,13 @@ class HomeActivity : ComponentActivity() {
         val freshBoot = savedInstanceState == null && settings.consumeFreshBoot()
         if (freshBoot) settings.launchOnBoot?.let { pkg -> launchOnBoot(pkg) }
 
+        val app = application as BanditBoxApplication
         val deps = LauncherDeps(
             index = AppIndex(this),
             visuals = visuals,
-            store = LayoutStore(File(filesDir, "layouts")),
+            store = app.layouts,
+            storeLock = app.layoutsLock,
+            sync = app.sync,
             settings = settings,
             tv = TvProviderReader(this),
             freshBoot = freshBoot,
@@ -73,10 +74,12 @@ class HomeActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         foreground = true
+        (application as BanditBoxApplication).sync.setForeground(true)
     }
 
     override fun onPause() {
         foreground = false
+        (application as BanditBoxApplication).sync.setForeground(false)
         super.onPause()
     }
 

@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":core-apps"))
     implementation(project(":guard"))
     implementation(project(":core-content"))
+    implementation(project(":core-sync"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))

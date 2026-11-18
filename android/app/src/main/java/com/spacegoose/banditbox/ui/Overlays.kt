@@ -65,6 +65,9 @@ sealed interface Overlay {
     data object KidsWarn : Overlay
     data object KidsUsageAccess : Overlay
     data object KidsServiceOff : Overlay
+    // Sync with a BanditBox server.
+    data object Sync : Overlay
+    data class SyncPair(val address: String, val serverName: String?) : Overlay
     class PickBackup(val sources: List<BackupSource>) : Overlay
     class Message(val title: String, val message: String) : Overlay
 
@@ -124,7 +127,7 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
         is Overlay.TextInput -> TextInputDialog(
             title = overlay.title,
             initial = overlay.initial,
-            onDone = { overlay.onDone(it); close() },
+            onDone = { close(); overlay.onDone(it) }, // onDone may open the next dialog
             onDismiss = close,
         )
         is Overlay.Choices -> ChoiceDialog(
@@ -171,6 +174,8 @@ fun OverlayHost(overlay: Overlay, ctx: OverlayContext) {
         is Overlay.PickInput -> PickInputDialog(overlay.key, overlay.press, ctx)
         Overlay.Backup -> BackupDialog(ctx)
         is Overlay.Themes -> ThemeDialog(overlay.page, ctx)
+        Overlay.Sync -> SyncDialog(ctx)
+        is Overlay.SyncPair -> SyncPairDialog(overlay, ctx)
         is Overlay.PickBackup -> PickBackupDialog(overlay.sources, ctx)
         is Overlay.KidsAppParent -> KidsAppParentDialog(overlay.app, ctx)
         Overlay.KidsSettings -> KidsSettingsDialog(ctx)
@@ -318,6 +323,7 @@ private fun SettingsDialog(ctx: OverlayContext) {
             Choice(stringResource(R.string.home_setup_title)) { close(); ctx.openHomeSetup() },
             Choice(stringResource(R.string.buttons)) { ctx.show(Overlay.Buttons) },
             Choice(stringResource(R.string.backup)) { ctx.show(Overlay.Backup) },
+            if (ctx.deps.sync != null && !ctx.isKids) Choice(stringResource(R.string.sync_settings)) { ctx.show(Overlay.Sync) } else null,
             Choice(stringResource(R.string.hidden_apps)) { ctx.show(Overlay.HiddenApps) },
             Choice(stringResource(R.string.android_settings)) { close(); ctx.deps.launch(SystemShortcuts.androidSettings) },
             Choice(stringResource(R.string.network_settings)) { close(); ctx.deps.launch(SystemShortcuts.network) },
