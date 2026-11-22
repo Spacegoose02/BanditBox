@@ -4,6 +4,8 @@ import android.content.Intent
 import android.util.Log
 import android.content.ActivityNotFoundException
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -899,53 +901,56 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
             )
         } else if (currentDoc != null) {
             // Nothing is drawn until the local layout is read, which takes milliseconds and never touches the network.
-            when (screen) {
-                Screen.HOME, Screen.PICK_PROFILE -> HomeScreen(
-                    rows = homeRows,
-                    apps = byPackage,
-                    visuals = deps.visuals,
-                    content = contentState,
-                    widgets = widgetState,
-                    topBar = {
-                        TopBar(
-                            items = currentDoc.topBar,
-                            profileName = currentDoc.profile.name,
-                            hasInputs = inputs.isNotEmpty(),
-                            actions = topBarActions,
-                            kidsMode = currentDoc.profile.kids != null,
-                            note = listOfNotNull(
-                                kidsStatus?.minutesLeft?.let { stringResource(R.string.kids_time_left, duration(context, it)) },
-                                sleepMinutes?.let { stringResource(R.string.sleep_note, duration(context, it)) },
-                            ).joinToString("  ").ifEmpty { null },
-                            feed = widgetState::feed,
-                        )
-                    },
-                    actions = tileActions,
-                )
-                Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
-                Screen.SEARCH -> SearchScreen(
-                    sources = searchSources,
-                    visuals = deps.visuals,
-                    actions = tileActions,
-                    onProgram = contentState.onOpen,
-                    onCard = widgetState.onOpen,
-                    launch = deps.launch,
-                )
-                Screen.EDIT_ROWS -> RowEditor(
-                    doc = currentDoc,
-                    edit = edit,
-                    show = { overlay = it },
-                    rowLabel = { row ->
-                        when (row) {
-                            is Row.Apps -> null
-                            is Row.WatchNext -> continueWatching
-                            is Row.Channel -> contentState.titleFor(row)
-                            is Row.Widget -> row.feed
-                        }
-                    },
-                    onAddChannel = ::pickChannel,
-                )
-                Screen.HOME_SETUP -> HomeSetupScreen(launch = deps.launch)
+            // A quick crossfade between Home, All apps, Search and the editors.
+            Crossfade(targetState = screen, animationSpec = tween(durationMillis = 220), label = "screen") { shown ->
+                when (shown) {
+                    Screen.HOME, Screen.PICK_PROFILE -> HomeScreen(
+                        rows = homeRows,
+                        apps = byPackage,
+                        visuals = deps.visuals,
+                        content = contentState,
+                        widgets = widgetState,
+                        topBar = {
+                            TopBar(
+                                items = currentDoc.topBar,
+                                profileName = currentDoc.profile.name,
+                                hasInputs = inputs.isNotEmpty(),
+                                actions = topBarActions,
+                                kidsMode = currentDoc.profile.kids != null,
+                                note = listOfNotNull(
+                                    kidsStatus?.minutesLeft?.let { stringResource(R.string.kids_time_left, duration(context, it)) },
+                                    sleepMinutes?.let { stringResource(R.string.sleep_note, duration(context, it)) },
+                                ).joinToString("  ").ifEmpty { null },
+                                feed = widgetState::feed,
+                            )
+                        },
+                        actions = tileActions,
+                    )
+                    Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
+                    Screen.SEARCH -> SearchScreen(
+                        sources = searchSources,
+                        visuals = deps.visuals,
+                        actions = tileActions,
+                        onProgram = contentState.onOpen,
+                        onCard = widgetState.onOpen,
+                        launch = deps.launch,
+                    )
+                    Screen.EDIT_ROWS -> RowEditor(
+                        doc = currentDoc,
+                        edit = edit,
+                        show = { overlay = it },
+                        rowLabel = { row ->
+                            when (row) {
+                                is Row.Apps -> null
+                                is Row.WatchNext -> continueWatching
+                                is Row.Channel -> contentState.titleFor(row)
+                                is Row.Widget -> row.feed
+                            }
+                        },
+                        onAddChannel = ::pickChannel,
+                    )
+                    Screen.HOME_SETUP -> HomeSetupScreen(launch = deps.launch)
+                }
             }
 
             openFolderId?.let { id ->

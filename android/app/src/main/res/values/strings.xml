@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">BanditBox</string>
     <string name="all_apps">All apps</string>
+    <string name="hero_hint">Press OK to open, hold OK for more</string>
     <string name="empty_home">Nothing here yet. Long-press an app in All apps and choose Add to row.</string>
 
     <!-- App menu -->

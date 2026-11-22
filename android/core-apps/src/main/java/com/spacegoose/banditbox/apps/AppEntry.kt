@@ -15,9 +15,21 @@ data class AppEntry(
     val isSystem: Boolean,
 )
 
+/** Package of the release build. Debug and ramcheck builds add a suffix such as ".debug". */
+const val BANDITBOX_PACKAGE = "com.spacegoose.banditbox"
+
+/**
+ * True for this build of BanditBox and every other build of it installed next to it
+ * (release, .debug, .ramcheck), so a TV with two builds doesn't list the other one as an app.
+ */
+fun isBanditBox(packageName: String, selfPackage: String): Boolean =
+    packageName == selfPackage ||
+        packageName == BANDITBOX_PACKAGE ||
+        packageName.startsWith("$BANDITBOX_PACKAGE.")
+
 /**
  * Builds the app list from the two launcher queries: one entry per package, preferring
- * the TV activity over the phone one, without BanditBox itself, sorted by label.
+ * the TV activity over the phone one, without any build of BanditBox, sorted by label.
  */
 fun mergeEntries(
     leanback: List<AppEntry>,
@@ -26,7 +38,7 @@ fun mergeEntries(
 ): List<AppEntry> {
     val byPackage = LinkedHashMap<String, AppEntry>()
     for (entry in leanback + launcher) {
-        if (entry.packageName == selfPackage) continue
+        if (isBanditBox(entry.packageName, selfPackage)) continue
         byPackage.putIfAbsent(entry.packageName, entry)
     }
     return byPackage.values.sortedWith(

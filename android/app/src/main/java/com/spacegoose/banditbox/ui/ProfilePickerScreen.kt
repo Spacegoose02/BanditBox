@@ -63,9 +63,14 @@ fun ProfilePickerScreen(
 
 @Composable
 private fun ProfileCard(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(20.dp)
     Card(
         onClick = onClick,
-        shape = CardDefaults.shape(shape = RoundedCornerShape(20.dp)),
+        shape = CardDefaults.shape(shape = shape),
+        scale = BanditCard.scale(),
+        border = BanditCard.border(shape),
+        glow = BanditCard.glow(),
+        colors = BanditCard.colors(),
         modifier = modifier.size(180.dp, 120.dp),
     ) {
         Column(

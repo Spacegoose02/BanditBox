@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -38,12 +39,17 @@ fun AppGrid(
     val firstTile = remember { FocusRequester() }
     LaunchedEffect(apps.isNotEmpty()) { if (apps.isNotEmpty()) focusWhenReady(firstTile) }
     Column(modifier = modifier) {
-        Text(text = title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 12.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.padding(start = 12.dp, bottom = 8.dp),
+        )
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = GRID_TILE.dpSize().width),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(CARD_GAP),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            // Room for the focused tile to grow and glow without being clipped.
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp),
         ) {
             itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
                 AppTile(
@@ -67,7 +73,7 @@ fun AllAppsScreen(title: String, apps: List<AppEntry>, visuals: AppVisuals, acti
         visuals = visuals,
         actions = actions,
         place = Place.AllApps,
-        modifier = Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp),
+        modifier = Modifier.fillMaxSize().padding(start = SCREEN_GUTTER - 12.dp, end = SCREEN_GUTTER - 12.dp, top = 28.dp),
     )
 }
 
@@ -82,7 +88,7 @@ fun FolderDialog(
     onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(shape = RoundedCornerShape(20.dp), modifier = Modifier.padding(64.dp)) {
+        Surface(shape = RoundedCornerShape(28.dp), modifier = Modifier.padding(64.dp)) {
             AppGrid(
                 title = name,
                 apps = apps,

@@ -43,6 +43,20 @@ class AppEntryTest {
     }
 
     @Test
+    fun hidesOtherBuildsOfItself() {
+        val merged = mergeEntries(
+            leanback = listOf(
+                app("com.spacegoose.banditbox", "BanditBox", leanback = true),
+                app("com.spacegoose.banditbox.ramcheck", "BanditBox", leanback = true),
+                app("com.spacegoose.bingebandit", "BingeBandit", leanback = true),
+            ),
+            launcher = emptyList(),
+            selfPackage = "com.spacegoose.banditbox.debug",
+        )
+        assertEquals(listOf("com.spacegoose.bingebandit"), merged.map { it.packageName })
+    }
+
+    @Test
     fun sortsByLabelIgnoringCase() {
         val merged = mergeEntries(
             leanback = listOf(

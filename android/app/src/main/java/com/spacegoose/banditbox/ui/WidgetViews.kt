@@ -67,11 +67,11 @@ class WidgetState(
 /** A widget row: a title, then the feed's cards drawn with its template. */
 @Composable
 fun WidgetRowView(title: String, feed: WidgetFeed, state: WidgetState) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        RowHeader(title)
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CARD_GAP),
+            contentPadding = PaddingValues(horizontal = SCREEN_GUTTER, vertical = 14.dp),
         ) {
             // Card ids key the row, so a feed that repeats one must not crash it.
             items(feed.cards.distinctBy { it.id }, key = { it.id }) { card ->
@@ -99,6 +99,10 @@ private fun PosterCard(card: WidgetCard, state: WidgetState, onClick: () -> Unit
             onClick = onClick,
             onLongClick = onLongClick,
             shape = CardDefaults.shape(shape = CARD_SHAPE),
+            scale = BanditCard.scale(),
+            border = BanditCard.border(CARD_SHAPE),
+            glow = BanditCard.glow(),
+            colors = BanditCard.colors(),
             modifier = Modifier.size(width, CARD_HEIGHT),
         ) {
             Box(Modifier.fillMaxSize()) {
@@ -168,6 +172,10 @@ private fun InfoCard(onClick: () -> Unit, onLongClick: (() -> Unit)?, width: Int
         onClick = onClick,
         onLongClick = onLongClick,
         shape = CardDefaults.shape(shape = CARD_SHAPE),
+        scale = BanditCard.scale(),
+        border = BanditCard.border(CARD_SHAPE),
+        glow = BanditCard.glow(),
+        colors = BanditCard.colors(),
         modifier = Modifier.size(width.dp, INFO_CARD_HEIGHT),
     ) {
         Box(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) { content() }
