@@ -21,7 +21,6 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -106,7 +105,7 @@ fun PickKeyDialog(ctx: OverlayContext) {
 fun DetectKeyDialog(ctx: OverlayContext) {
     val focus = remember { FocusRequester() }
     val cancel = { ctx.show(Overlay.PickKey) }
-    Dialog(onDismissRequest = cancel) {
+    BanditDialog(onDismissRequest = cancel) {
         Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(420.dp)) {
             Column(
                 modifier = Modifier

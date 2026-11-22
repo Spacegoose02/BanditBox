@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -130,7 +129,7 @@ fun SyncPairDialog(o: Overlay.SyncPair, ctx: OverlayContext) {
 @Composable
 private fun PairCodeDialog(code: String, serverUrl: String, onCancel: () -> Unit) {
     val button = remember { FocusRequester() }
-    Dialog(onDismissRequest = onCancel) {
+    BanditDialog(onDismissRequest = onCancel) {
         Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(420.dp)) {
             Column(
                 modifier = Modifier.padding(24.dp),
