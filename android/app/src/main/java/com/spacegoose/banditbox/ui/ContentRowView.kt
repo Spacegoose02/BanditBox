@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +36,7 @@ import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.content.TvProgram
 import com.spacegoose.banditbox.layout.TileSize
 
-private val CARD_SHAPE = RoundedCornerShape(12.dp)
+private val CARD_SHAPE = RoundedCornerShape(14.dp)
 
 /** Card height for a content row's size. Width follows each poster's shape. */
 private fun TileSize.cardHeight(): Dp = when (this) {
@@ -51,22 +52,43 @@ fun ContentRowView(
     size: TileSize,
     programs: List<TvProgram>,
     onOpen: (TvProgram) -> Unit,
+    /** Hears which card has focus, for the home screen's featured area. */
+    onFocused: (HeroItem) -> Unit = {},
 ) {
     val loader = Posters.loader(LocalContext.current)
     val height = size.cardHeight()
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        RowHeader(title)
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CARD_GAP),
+            contentPadding = PaddingValues(horizontal = SCREEN_GUTTER, vertical = 14.dp),
         ) {
             items(programs, key = { it.packageName + "/" + it.id }) { program ->
                 val width = height * program.aspect.coerceIn(0.6f, 2f)
-                Column(modifier = Modifier.width(width), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(modifier = Modifier.width(width), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Card(
                         onClick = { onOpen(program) },
                         shape = CardDefaults.shape(shape = CARD_SHAPE),
-                        modifier = Modifier.size(width, height),
+                        scale = BanditCard.scale(),
+                        border = BanditCard.border(CARD_SHAPE),
+                        glow = BanditCard.glow(),
+                        colors = BanditCard.colors(),
+                        modifier = Modifier
+                            .size(width, height)
+                            .onFocusChanged { state ->
+                                if (state.hasFocus) {
+                                    onFocused(
+                                        HeroItem(
+                                            key = "program:" + program.packageName + "/" + program.id,
+                                            title = program.title,
+                                            caption = title,
+                                            detail = program.subtitle,
+                                            imageUri = program.imageUri,
+                                            imageIsBanner = program.imageUri != null,
+                                        ),
+                                    )
+                                }
+                            },
                     ) {
                         Box(Modifier.fillMaxSize()) {
                             if (program.imageUri != null) {
@@ -107,7 +129,8 @@ fun ContentRowView(
                     }
                     Text(
                         text = program.subtitle?.let { "${program.title} · $it" } ?: program.title,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -123,12 +146,16 @@ fun ContentRowView(
  */
 @Composable
 fun ContentPermissionRow(title: String, onAllow: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
-        Box(Modifier.padding(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        RowHeader(title)
+        Box(Modifier.padding(horizontal = SCREEN_GUTTER, vertical = 14.dp)) {
             Card(
                 onClick = onAllow,
                 shape = CardDefaults.shape(shape = CARD_SHAPE),
+                scale = BanditCard.scale(),
+                border = BanditCard.border(CARD_SHAPE),
+                glow = BanditCard.glow(),
+                colors = BanditCard.colors(),
                 modifier = Modifier.size(360.dp, 96.dp),
             ) {
                 Column(

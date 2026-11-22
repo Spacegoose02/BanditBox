@@ -1,6 +1,10 @@
 package com.spacegoose.banditbox.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +13,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -102,7 +110,8 @@ private fun drawnRows(rows: List<HomeRow>, content: ContentState, widgets: Widge
     }
 }
 
-/** The main screen: top bar, then the layout's rows. */
+/** The main screen: top bar, the featured area for whatever is focused, then the layout's rows. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     rows: List<HomeRow>,
@@ -119,29 +128,50 @@ fun HomeScreen(
     val firstTile = remember { FocusRequester() }
     val firstAppsRow = drawn.indexOfFirst { it is Drawn.Apps && it.row.firstShown(apps) >= 0 }
     LaunchedEffect(firstAppsRow >= 0) { if (firstAppsRow >= 0) focusWhenReady(firstTile) }
-    Column(modifier = modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp)) {
-        topBar()
+    var hero by remember { mutableStateOf<HeroItem?>(null) }
+    val showHero: (HeroItem) -> Unit = { hero = it }
+
+    // Rows keep their own sideways scrolling; only the column of rows pins the focused row
+    // near the top, so moving down feels like paging through shelves.
+    val rowScrolling = LocalBringIntoViewSpec.current
+    Column(modifier = modifier.fillMaxSize().padding(top = 28.dp)) {
+        Box(Modifier.padding(horizontal = SCREEN_GUTTER)) { topBar() }
         if (drawn.isEmpty()) {
             Text(
                 text = stringResource(R.string.empty_home),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 32.dp),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = SCREEN_GUTTER, end = SCREEN_GUTTER, top = 48.dp),
             )
+        } else {
+            HeroBanner(hero, Modifier.padding(top = 8.dp))
         }
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(top = 20.dp, bottom = 32.dp),
-        ) {
-            itemsIndexed(drawn, key = { _, row -> row.key }) { index, row ->
-                when (row) {
-                    is Drawn.Apps -> AppsRow(row.row, apps, visuals, actions, if (index == firstAppsRow) firstTile else null)
-                    is Drawn.Cards -> ContentRowView(content.titleFor(row.row), row.row.size, row.programs, content.onOpen)
-                    is Drawn.AskPermission -> ContentPermissionRow(content.titleFor(row.row), content.onAllow)
-                    is Drawn.Widget -> WidgetRowView(row.title, row.feed, widgets)
+        CompositionLocalProvider(LocalBringIntoViewSpec provides PinFocusedRowNearTop) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                contentPadding = PaddingValues(top = 12.dp, bottom = 96.dp),
+            ) {
+                itemsIndexed(drawn, key = { _, row -> row.key }) { index, row ->
+                    CompositionLocalProvider(LocalBringIntoViewSpec provides rowScrolling) {
+                        when (row) {
+                            is Drawn.Apps -> AppsRow(row.row, apps, visuals, actions, if (index == firstAppsRow) firstTile else null, showHero)
+                            is Drawn.Cards -> ContentRowView(content.titleFor(row.row), row.row.size, row.programs, content.onOpen, showHero)
+                            is Drawn.AskPermission -> ContentPermissionRow(content.titleFor(row.row), content.onAllow)
+                            is Drawn.Widget -> WidgetRowView(row.title, row.feed, widgets)
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+/**
+ * Scrolls the column so the focused row's top lines up with the column's top, under the
+ * featured area. The list's own end stops it at the last rows.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private val PinFocusedRowNearTop = object : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset
 }
 
 @Composable
@@ -152,14 +182,15 @@ private fun AppsRow(
     actions: TileActions,
     /** Put on the row's first shown tile, when this row gets focus at start. */
     firstTile: FocusRequester?,
+    showHero: (HeroItem) -> Unit,
 ) {
     val first = row.firstShown(apps)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        row.title?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        row.title?.let { RowHeader(it) }
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            // Room for the focused tile to scale up without clipping.
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(CARD_GAP),
+            // Lined up with the screen gutter, with room for the focused tile to grow and glow.
+            contentPadding = PaddingValues(horizontal = SCREEN_GUTTER, vertical = 14.dp),
         ) {
             itemsIndexed(row.items, key = { _, item -> item.key() }) { index, item ->
                 val focus = if (firstTile != null && index == first) Modifier.focusRequester(firstTile) else Modifier
@@ -172,6 +203,9 @@ private fun AppsRow(
                             onClick = { actions.onOpen(app) },
                             onLongClick = { actions.onAppMenu(app, Place.InRow(row.id)) },
                             modifier = focus,
+                            onFocused = { art, isBanner ->
+                                showHero(HeroItem("app:" + app.packageName, app.label, row.title, image = art, imageIsBanner = isBanner))
+                            },
                         )
                     }
                     is ResolvedItem.FolderItem -> FolderTile(
@@ -180,6 +214,7 @@ private fun AppsRow(
                         onClick = { actions.onFolderOpen(item) },
                         onLongClick = { actions.onFolderMenu(item, row.id) },
                         modifier = focus,
+                        onFocused = { showHero(HeroItem("folder:" + item.id, item.name, row.title, imageIsBanner = false)) },
                     )
                 }
             }
