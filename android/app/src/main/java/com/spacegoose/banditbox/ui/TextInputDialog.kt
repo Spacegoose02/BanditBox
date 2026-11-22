@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -40,7 +39,7 @@ fun TextInputDialog(title: String, initial: String, onDone: (String) -> Unit, on
     val onSurface = MaterialTheme.colorScheme.onSurface
     val submit = { if (text.isNotBlank()) onDone(text.trim()) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    BanditDialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.width(400.dp)) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(text = title, style = MaterialTheme.typography.titleLarge)
