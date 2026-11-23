@@ -164,6 +164,13 @@ object LayoutEdits {
     fun setTile(doc: LayoutDocument, rowId: String, tile: Tile): LayoutDocument =
         doc.editAppsRow(rowId) { it.copy(tile = tile) }
 
+    /** Where the rows sit on the home screen. */
+    fun setRowAlign(doc: LayoutDocument, align: RowAlign): LayoutDocument {
+        val home = doc.home ?: Home()
+        if (home.rowAlign == align) return doc
+        return doc.copy(home = home.copy(rowAlign = align)).bumped()
+    }
+
     // ---- Profile ----
 
     fun renameProfile(doc: LayoutDocument, name: String): LayoutDocument {

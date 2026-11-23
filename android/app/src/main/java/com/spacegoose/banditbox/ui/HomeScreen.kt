@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,6 +38,7 @@ import com.spacegoose.banditbox.layout.HomeRow
 import com.spacegoose.banditbox.layout.ItemRef
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
+import com.spacegoose.banditbox.layout.RowAlign
 import com.spacegoose.banditbox.layout.WidgetFeed
 
 /** Where a tile was long-pressed, which decides what its menu offers. */
@@ -122,6 +124,8 @@ fun HomeScreen(
     topBar: @Composable () -> Unit,
     actions: TileActions,
     modifier: Modifier = Modifier,
+    /** Where the rows sit when they all fit under the featured area. */
+    rowAlign: RowAlign = RowAlign.TOP,
 ) {
     val drawn = remember(rows, content.tv, content.allowed, widgets) { drawnRows(rows, content, widgets) }
     // Start with the first tile focused, so the first D-pad press moves instead of only highlighting.
@@ -146,9 +150,12 @@ fun HomeScreen(
             HeroBanner(hero, Modifier.padding(top = 8.dp))
         }
         CompositionLocalProvider(LocalBringIntoViewSpec provides PinFocusedRowNearTop) {
+            // The column takes all the space under the featured area, so rows that fit can sit at
+            // its top, middle or bottom. Rows that don't fit scroll from the top as before.
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 96.dp),
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(ROW_GAP, rowAlign.vertical()),
+                contentPadding = PaddingValues(top = 12.dp, bottom = rowAlign.bottomPadding()),
             ) {
                 itemsIndexed(drawn, key = { _, row -> row.key }) { index, row ->
                     CompositionLocalProvider(LocalBringIntoViewSpec provides rowScrolling) {
@@ -163,6 +170,21 @@ fun HomeScreen(
             }
         }
     }
+}
+
+private fun RowAlign.vertical(): Alignment.Vertical = when (this) {
+    RowAlign.TOP -> Alignment.Top
+    RowAlign.CENTER -> Alignment.CenterVertically
+    RowAlign.BOTTOM -> Alignment.Bottom
+}
+
+/**
+ * Room under the last row. At the top it leaves space to scroll the last rows up; at the
+ * bottom it keeps the rows clear of the TV's overscan edge without floating them high.
+ */
+private fun RowAlign.bottomPadding() = when (this) {
+    RowAlign.TOP -> 96.dp
+    RowAlign.CENTER, RowAlign.BOTTOM -> 36.dp
 }
 
 /**

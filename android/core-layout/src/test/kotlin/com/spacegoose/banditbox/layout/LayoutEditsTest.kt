@@ -15,6 +15,16 @@ class LayoutEditsTest {
         (doc.rows.first { it.id == rowId } as Row.Apps).items
 
     @Test
+    fun setRowAlignBumpsOnlyOnChange() {
+        val bottom = LayoutEdits.setRowAlign(base, RowAlign.BOTTOM)
+        assertEquals(RowAlign.BOTTOM, bottom.home?.rowAlign)
+        assertEquals(6L, bottom.version)
+        assertSame(bottom, LayoutEdits.setRowAlign(bottom, RowAlign.BOTTOM))
+        // Top is the default, so a document without the setting is already at top.
+        assertSame(base, LayoutEdits.setRowAlign(base, RowAlign.TOP))
+    }
+
+    @Test
     fun addToRowAppendsOnceAndBumpsVersion() {
         val once = LayoutEdits.addToRow(base, "favorites", "a.four")
         assertEquals(listOf("a.one", "a.gone", "a.two", "a.three", "a.four"), items(once))

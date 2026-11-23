@@ -21,6 +21,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.spacegoose.banditbox.R
 import com.spacegoose.banditbox.layout.Row as LayoutRow
+import com.spacegoose.banditbox.layout.RowAlign
 import com.spacegoose.banditbox.layout.Tile
 import com.spacegoose.banditbox.layout.TileShape
 import com.spacegoose.banditbox.layout.TileSize
@@ -29,6 +30,7 @@ import com.spacegoose.banditbox.layout.WatchNextKind
 
 /** What the row editor can ask for. */
 class RowEditorActions(
+    val onRowAlign: (RowAlign) -> Unit,
     val onAddRow: () -> Unit,
     val onAddWatchNext: () -> Unit,
     val onAddChannel: () -> Unit,
@@ -45,7 +47,7 @@ class RowEditorActions(
  * what a non-app row shows, such as "Continue watching" or the channel's app.
  */
 @Composable
-fun RowEditorScreen(rows: List<LayoutRow>, rowLabel: (LayoutRow) -> String?, actions: RowEditorActions) {
+fun RowEditorScreen(rows: List<LayoutRow>, rowAlign: RowAlign, rowLabel: (LayoutRow) -> String?, actions: RowEditorActions) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -57,6 +59,8 @@ fun RowEditorScreen(rows: List<LayoutRow>, rowLabel: (LayoutRow) -> String?, act
             Button(onClick = actions.onAddRow) { Text(stringResource(R.string.add_row)) }
             Button(onClick = actions.onAddWatchNext) { Text(stringResource(R.string.add_watch_next_row)) }
             Button(onClick = actions.onAddChannel) { Text(stringResource(R.string.add_channel_row)) }
+            // Each press moves the rows: top, center, bottom, then top again.
+            Button(onClick = { actions.onRowAlign(rowAlign.next()) }) { Text(stringResource(rowAlign.label())) }
         }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -149,6 +153,13 @@ private fun TileSize.label() = when (this) {
 private fun TileStyle.label() = when (this) {
     TileStyle.BANNER -> R.string.style_banner
     TileStyle.ICON -> R.string.style_icon
+}
+
+@StringRes
+private fun RowAlign.label() = when (this) {
+    RowAlign.TOP -> R.string.row_align_top
+    RowAlign.CENTER -> R.string.row_align_center
+    RowAlign.BOTTOM -> R.string.row_align_bottom
 }
 
 @StringRes

@@ -177,6 +177,9 @@
     <string name="continue_watching">Continue watching</string>
     <string name="add_watch_next_row">Add Continue watching</string>
     <string name="add_channel_row">Add app channel</string>
+    <string name="row_align_top">Rows: Top</string>
+    <string name="row_align_center">Rows: Center</string>
+    <string name="row_align_bottom">Rows: Bottom</string>
     <string name="no_channels">No app has published a channel BanditBox can read yet. Open the app once (YouTube, Plex, Jellyfin…) and try again. On Google TV some apps only publish to Google\'s own home screen.</string>
     <string name="content_allow_title">Show what you\'re watching</string>
     <string name="content_allow_text">Press to let BanditBox read Continue watching and channels from your apps.</string>

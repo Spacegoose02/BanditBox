@@ -13,5 +13,6 @@
     "iconPack": "pkg:com.example.iconpack",
     "screensaver": { "type": "oled-starfield", "timeoutMin": 15 }
   },
-  "rows": []
+  "rows": [],
+  "home": { "rowAlign": "bottom" }
 }
