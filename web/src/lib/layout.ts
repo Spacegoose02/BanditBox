@@ -38,7 +38,12 @@ export type LayoutDoc = Layout & {
 	folders?: Folder[];
 	hiddenApps?: string[];
 	topBar?: string[];
+	/** How the home screen arranges its rows. */
+	home?: { rowAlign?: RowAlign; [key: string]: unknown };
 };
+
+/** Where the rows sit on the TV when they all fit on screen. */
+export type RowAlign = 'top' | 'center' | 'bottom';
 
 export interface KnownApp {
 	packageName: string;

@@ -46,6 +46,14 @@ class LayoutDocumentTest {
         assertNull(doc.theme)
         assertTrue(doc.rows.isEmpty())
         assertTrue(doc.hiddenApps.isEmpty())
+        assertNull(doc.home)
+    }
+
+    @Test
+    fun decodesRowAlign() {
+        val doc = LayoutJson.decode(example("themed.json"))
+        assertEquals(RowAlign.BOTTOM, doc.home?.rowAlign)
+        assertEquals(doc, LayoutJson.decode(LayoutJson.encode(doc)))
     }
 
     @Test

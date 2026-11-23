@@ -11,7 +11,8 @@
 		rowKinds,
 		type KnownApp,
 		type LayoutDoc,
-		type Row
+		type Row,
+		type RowAlign
 	} from '$lib/layout';
 	import AppList from '$lib/components/AppList.svelte';
 
@@ -234,6 +235,24 @@
 	</section>
 
 	<h2>Rows</h2>
+	<section class="panel">
+		<label
+			><span>Row position</span>
+			<select
+				value={doc.home?.rowAlign ?? 'top'}
+				onchange={(e) => {
+					if (doc) doc.home = { ...doc.home, rowAlign: e.currentTarget.value as RowAlign };
+				}}
+			>
+				<option value="top">Top, under the banner</option>
+				<option value="center">Center</option>
+				<option value="bottom">Bottom of the screen</option>
+			</select></label
+		>
+		<p class="muted small">
+			Where the rows sit when they all fit. More rows than fit scroll as usual.
+		</p>
+	</section>
 	{#each doc.rows as row, i (row.id)}
 		<section class="panel">
 			<div class="row spread head">

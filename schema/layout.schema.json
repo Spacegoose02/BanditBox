@@ -16,6 +16,7 @@
     "folders": { "type": "array", "items": { "$ref": "#/$defs/folder" } },
     "hiddenApps": { "type": "array", "items": { "$ref": "#/$defs/packageName" }, "uniqueItems": true },
     "topBar": { "type": "array", "items": { "$ref": "#/$defs/topBarItem" } },
+    "home": { "$ref": "#/$defs/home" },
     "remap": { "type": "array", "items": { "$ref": "#/$defs/remap" } }
   },
   "$defs": {
@@ -209,6 +210,18 @@
         "id": { "$ref": "#/$defs/id" },
         "name": { "type": "string", "minLength": 1, "maxLength": 40 },
         "items": { "type": "array", "items": { "$ref": "#/$defs/packageName" } }
+      }
+    },
+    "home": {
+      "type": "object",
+      "description": "How the home screen arranges its rows.",
+      "additionalProperties": false,
+      "properties": {
+        "rowAlign": {
+          "enum": ["top", "center", "bottom"],
+          "default": "top",
+          "description": "Where the rows sit when they fit on screen: right under the featured banner (top), in the middle of the space left, or down at the bottom edge. When there are more rows than fit, they scroll as usual."
+        }
       }
     },
     "topBarItem": {

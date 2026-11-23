@@ -73,6 +73,7 @@ import com.spacegoose.banditbox.layout.Profiles
 import com.spacegoose.banditbox.layout.ResolvedAppsRow
 import com.spacegoose.banditbox.layout.ResolvedItem
 import com.spacegoose.banditbox.layout.Row
+import com.spacegoose.banditbox.layout.RowAlign
 import com.spacegoose.banditbox.layout.ScreensaverType
 import com.spacegoose.banditbox.layout.Startup
 import com.spacegoose.banditbox.layout.ThemeResolver
@@ -925,6 +926,7 @@ fun BanditBoxApp(deps: LauncherDeps, homePresses: Int, request: ShowRequest?, fo
                             )
                         },
                         actions = tileActions,
+                        rowAlign = currentDoc.home?.rowAlign ?: RowAlign.TOP,
                     )
                     Screen.ALL_APPS -> AllAppsScreen(stringResource(R.string.all_apps), allApps, deps.visuals, tileActions)
                     Screen.SEARCH -> SearchScreen(
@@ -1050,8 +1052,10 @@ private fun RowEditor(
     val continueWatching = stringResource(R.string.continue_watching)
     RowEditorScreen(
         rows = doc.rows,
+        rowAlign = doc.home?.rowAlign ?: RowAlign.TOP,
         rowLabel = rowLabel,
         actions = RowEditorActions(
+            onRowAlign = { align -> edit { LayoutEdits.setRowAlign(it, align) } },
             onAddRow = { show(Overlay.TextInput(nameTitle, "") { name -> edit { LayoutEdits.addRow(it, name).first } }) },
             onAddWatchNext = { edit { LayoutEdits.addWatchNextRow(it, continueWatching).first } },
             onAddChannel = onAddChannel,

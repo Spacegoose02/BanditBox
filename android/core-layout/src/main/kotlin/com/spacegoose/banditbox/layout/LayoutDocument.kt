@@ -18,6 +18,8 @@ data class LayoutDocument(
     val folders: List<Folder> = emptyList(),
     val hiddenApps: List<String> = emptyList(),
     val topBar: List<String> = emptyList(),
+    /** How the home screen arranges its rows; null means the defaults. */
+    val home: Home? = null,
     val remap: List<Remap> = emptyList(),
 ) {
     companion object {
@@ -93,6 +95,25 @@ data class ThemeColors(
 /** [type] is "none", "system", "oled-drift", "oled-starfield", "oled-black" or "photos" (with [feed]). */
 @Serializable
 data class Screensaver(val type: String, val timeoutMin: Int? = null, val feed: String? = null)
+
+/** How the home screen arranges its rows. */
+@Serializable
+data class Home(
+    val rowAlign: RowAlign = RowAlign.TOP,
+)
+
+/** Where the rows sit when they all fit on screen; when they don't, they scroll as usual. */
+@Serializable
+enum class RowAlign {
+    /** Right under the featured banner. */
+    @SerialName("top") TOP,
+
+    /** In the middle of the space under the featured banner. */
+    @SerialName("center") CENTER,
+
+    /** Down at the bottom edge of the screen. */
+    @SerialName("bottom") BOTTOM,
+}
 
 @Serializable
 sealed interface Row {
